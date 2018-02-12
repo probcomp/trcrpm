@@ -83,38 +83,6 @@ class TRCRP_Mixture(object):
         else:
             raise ValueError('Unknown backend: %s' % (backend,))
 
-    def activate_glm(self, variable, covariates=None):
-        """Model variable to use GLM regression on other covariate variables."""
-        assert self.lag > 0
-        # By default use auto-regression on self.
-        if covariates is None:
-            covariates = [variable]
-        distargs = {'inputs' : [
-            self._variable_to_index(covariate, l)
-            for covariate in covariates for l in xrange(1, self.lag+1)
-        ]}
-        self.engine.update_cctype(
-            self._variable_to_index(variable),
-            'linear_regression',
-            distargs,
-        )
-
-    def activate_glm_bulk(self, variables, covariates_list=None, multiprocess=1):
-        """Convert multiple variables to GLM in bulk (multiprocessing)."""
-        if covariates_list is None:
-            covariates_list = [None] * len(variables)
-        args = [
-            (state, variables, covariates_list, self._variable_to_index,
-                self.lag) for state in self.engine.states
-        ]
-        mapper = parallel_map if multiprocess else map
-        states = mapper(_activate_glm_bulk_mp, args)
-        self.engine.states = states
-
-    def deactivate_glm(self, variable):
-        self.engine.update_cctype(
-            self._variable_to_index(variable), 'normal', None)
-
     def simulate(self, sampids, variables, nsamples, multiprocess=1):
         """Simulate sampids and variables in a non-ancestral manner.
 
@@ -406,18 +374,3 @@ def _simulate_ancestral_one(
         sample = state.simulate(rowids[i], query, constraints[i])
         samples[sampid] = sample
     return samples
-
-
-def _activate_glm_bulk_mp((state, columns, covariates_list, column_to_index,
-        lag)):
-    """Convert columns to GLM in the state."""
-    for column, covariates in zip(columns, covariates_list):
-        if covariates is None:
-            covariates = [column]
-        distargs = {'inputs' : [
-            column_to_index(covariate, l)
-            for covariate in covariates for l in xrange(1, lag+1)
-        ]}
-        state.update_cctype(
-            column_to_index(column), 'linear_regression', distargs)
-    return state
