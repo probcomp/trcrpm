@@ -99,14 +99,14 @@ class TRCRP_Mixture(object):
         """
         cgpm_rowids = [self._sampid_to_rowid(sampid) for sampid in sampids]
         constraints_list = [self._get_cgpm_constraints(sampid) for sampid in sampids]
-        query = [self._variable_to_index(var) for var in variables]
-        targets_list = [query] * len(cgpm_rowids)
+        targets = [self._variable_to_index(var) for var in variables]
+        targets_list = [targets] * len(cgpm_rowids)
         Ns = [nsamples] * len(cgpm_rowids)
         samples_raw = self.engine.simulate_bulk(cgpm_rowids, targets_list,
             constraints_list, Ns=Ns, multiprocess=multiprocess)
         samples = list(itertools.chain.from_iterable(
             zip(*sample) for sample in samples_raw))
-        extract_vals = lambda sample: tuple(sample[col] for col in query)
+        extract_vals = lambda sample: tuple(sample[t] for t in targets)
         return [tuple(extract_vals(s) for s in sample) for sample in samples]
 
     def simulate_ancestral(self, sampids, variables, nsamples, multiprocess=1):
@@ -115,7 +115,7 @@ class TRCRP_Mixture(object):
         Returned samples follow same convention as PanelCat.simulate
         """
         assert sampids == sorted(sampids)
-        query = [self._variable_to_index(var) for var in variables]
+        targets = [self._variable_to_index(var) for var in variables]
         rowids = [self._sampid_to_rowid(sampid) for sampid in sampids]
         constraints = [self._get_cgpm_constraints(sampid) for sampid in sampids]
         windows = {sampid: set(self._get_sampid_window(sampid))
@@ -123,7 +123,7 @@ class TRCRP_Mixture(object):
         parents = {sampid: self._get_parents_from_windows(sampid, windows)
             for sampid in sampids}
         args = [
-            (state, sampids, variables, rowids, query,
+            (state, sampids, variables, rowids, targets,
                 constraints, parents, self._variable_to_index, nsamples)
             for state in self.engine.states
         ]
@@ -132,7 +132,7 @@ class TRCRP_Mixture(object):
         samples_raw_list = mapper(_simulate_ancestral_mp, args)
         samples_raw = itertools.chain.from_iterable(samples_raw_list)
         return [
-            [[sample[sampid][col] for col in query] for sampid in sampids]
+            [[sample[sampid][t] for t in targets] for sampid in sampids]
             for sample in samples_raw
         ]
 
@@ -346,20 +346,18 @@ class TRCRP_Mixture(object):
         return model
 
 
-def _simulate_ancestral_mp((
-        state, sampids, variables, rowids, query, constraints, parents,
-        variable_to_index, nsamples)):
+def _simulate_ancestral_mp((state, sampids, variables, rowids, targets,
+        constraints, parents, variable_to_index, nsamples)):
     return [
         _simulate_ancestral_one(
-            state, sampids, variables, rowids, query, constraints, parents,
+            state, sampids, variables, rowids, targets, constraints, parents,
             variable_to_index)
         for _i in xrange(nsamples)
     ]
 
 
-def _simulate_ancestral_one(
-        state, sampids, variables, rowids, query, constraints, parents,
-        variable_to_index):
+def _simulate_ancestral_one(state, sampids, variables, rowids, targets,
+        constraints, parents, variable_to_index):
     """Simulate sampids and variables in an ancestral manner."""
     samples = dict()
     for i, sampid in enumerate(sampids):
@@ -367,10 +365,10 @@ def _simulate_ancestral_one(
             variable_to_index(var, sampid-sampid_parent) :
                 samples[sampid_parent][var_idx]
             for sampid_parent in parents[sampid]
-            for var, var_idx in zip(variables, query)
+            for var, var_idx in zip(variables, targets)
         }
         if constraints[i] is not None:
             constraints[i].update(simulated_parents)
-        sample = state.simulate(rowids[i], query, constraints[i])
+        sample = state.simulate(rowids[i], targets, constraints[i])
         samples[sampid] = sample
     return samples
