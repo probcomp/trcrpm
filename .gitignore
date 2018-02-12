@@ -1,0 +1,9 @@
+.cache/
+.eggs
+
+/bayeslite.egg-info/
+/build/
+/dist/
+/src/version.py
+
+__pycache__
