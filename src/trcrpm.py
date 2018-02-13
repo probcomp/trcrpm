@@ -134,12 +134,12 @@ class TRCRP_Mixture(object):
         targets = [self._variable_to_index(var) for var in variables]
         targets_list = [targets] * len(cgpm_rowids)
         Ns = [nsamples] * len(cgpm_rowids)
-        samples_raw = self.engine.simulate_bulk(cgpm_rowids, targets_list,
+        samples_raw_bulk = self.engine.simulate_bulk(cgpm_rowids, targets_list,
             constraints_list, Ns=Ns, multiprocess=multiprocess)
-        samples = list(itertools.chain.from_iterable(
-            zip(*sample) for sample in samples_raw))
+        samples_raw = list(itertools.chain.from_iterable(
+            zip(*sample) for sample in samples_raw_bulk))
         extract_vals = lambda sample: tuple(sample[t] for t in targets)
-        return [tuple(extract_vals(s) for s in sample) for sample in samples]
+        return [tuple(extract_vals(s) for s in sample) for sample in samples_raw]
 
     def simulate_ancestral(self, sampids, variables, nsamples, multiprocess=1):
         """Generate simulations from the posterior distribution ancestrally.
