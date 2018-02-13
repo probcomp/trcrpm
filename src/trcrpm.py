@@ -112,9 +112,9 @@ class TRCRP_Mixture(object):
         -------
         np.ndarray
             3D array of generated samples. The dimensions of the returned list
-            are `(self.chains*nsamples, len(timepoints), len(variables))`, so that
-            `result[i][j][k]` contains a simulation of `variables[k],` at timepoint
-            `j`, from chain `i`.
+            are `(self.chains*nsamples, len(timepoints), len(variables))`, so
+            that `result[i][j][k]` contains a simulation of `variables[k],` at
+            timepoint `j`, from chain `i`.
 
             // model has 2 chains, so chains * nsamples = 6 samples returned.
             >> model.simulate([1, 4], ['a', 'b'], 3)
@@ -130,8 +130,8 @@ class TRCRP_Mixture(object):
             sample1.1: ((sim1.1_a1, sim1.1_b1), (sim1.1_a40, sim1.1_b40))
             sample1.2: ((sim1.2_a1, sim1.2_b1), (sim1.2_a40, sim1.2_b40))
         """
-        cgpm_rowids = [self._timepoint_to_rowid(timepoint) for timepoint in timepoints]
-        constraints_list = [self._get_cgpm_constraints(timepoint) for timepoint in timepoints]
+        cgpm_rowids = [self._timepoint_to_rowid(t) for t in timepoints]
+        constraints_list = [self._get_cgpm_constraints(t) for t in timepoints]
         targets = [self._variable_to_index(var) for var in variables]
         targets_list = [targets] * len(cgpm_rowids)
         Ns = [nsamples] * len(cgpm_rowids)
@@ -154,8 +154,8 @@ class TRCRP_Mixture(object):
         """
         assert timepoints == sorted(timepoints)
         targets = [self._variable_to_index(var) for var in variables]
-        rowids = [self._timepoint_to_rowid(timepoint) for timepoint in timepoints]
-        constraints = [self._get_cgpm_constraints(timepoint) for timepoint in timepoints]
+        rowids = [self._timepoint_to_rowid(t) for t in timepoints]
+        constraints = [self._get_cgpm_constraints(t) for t in timepoints]
         windows = {timepoint: set(self._get_timepoint_window(timepoint))
             for timepoint in timepoints}
         parents = {timepoint: self._get_parents_from_windows(timepoint, windows)
@@ -170,7 +170,7 @@ class TRCRP_Mixture(object):
         samples_raw_list = mapper(_simulate_ancestral_mp, args)
         samples_raw = itertools.chain.from_iterable(samples_raw_list)
         samples = np.asarray([
-            [[sample[timepoint][t] for t in targets] for timepoint in timepoints]
+            [[sample[t][variable] for variable in targets] for t in timepoints]
             for sample in samples_raw
         ])
         return samples
@@ -213,16 +213,17 @@ class TRCRP_Mixture(object):
         Returns
         -------
         np.ndarray
-            2D array containing latent temporal regime at `timepoints` of the given
-            variable, for each chain. The dimensions of the returned array are
-            `(self.chains, len(timepoints))`, where `result[i][t]` is the value of
-            the hidden temporal regime at `timepoints[t]`, according to chain `i`.
+            2D array containing latent temporal regime at `timepoints` of the
+            given variable, for each chain. The dimensions of the returned array
+            are `(self.chains, len(timepoints))`, where `result[i][t]` is the
+            value of the hidden temporal regime at `timepoints[t]`, according to
+            chain `i`.
 
             NOTE: The numerical (integer) values of the regimes are immaterial.
         """
         if timepoints is None:
             timepoints = self.dataset.index
-        rowids = [self._timepoint_to_rowid(timepoint) for timepoint in timepoints]
+        rowids = [self._timepoint_to_rowid(t) for t in timepoints]
         varno = self._variable_to_index(variable)
         regimes = [[state.view_for(varno).Zr(rowid) for rowid in rowids]
             for state in self.engine.states]
@@ -231,8 +232,9 @@ class TRCRP_Mixture(object):
     def _incorporate_new_timepoints(self, frame):
         """Incorporate fresh sample ids as new cgpm rows."""
         new_timepoints = frame.index[~frame.index.isin(self.dataset.index)]
-        self.dataset = self.dataset.append(frame[self.variables].loc[new_timepoints])
-        new_rows = [self._get_timepoint_row(timepoint) for timepoint in new_timepoints]
+        new_observations = frame[self.variables].loc[new_timepoints]
+        self.dataset = self.dataset.append(new_observations)
+        new_rows = [self._get_timepoint_row(t) for t in new_timepoints]
         if self.initialized:
             outputs = self.engine.states[0].outputs
             for row, timepoint in zip(new_rows, new_timepoints):
@@ -264,9 +266,11 @@ class TRCRP_Mixture(object):
         cgpm_rowids_cells = []
         # For each new timepoint, get the cgpm rowids and cell values to force.
         for nan_timepoint, nan_timepoint_mask in nan_mask.iterrows():
-            self._update_dataset_nan_timepoint(frame, nan_timepoint, nan_timepoint_mask)
-            timepoint_rowids_cells = self._convert_nan_timepoint_to_cgpm_rowid_cells(
+            self._update_dataset_nan_timepoint(
                 frame, nan_timepoint, nan_timepoint_mask)
+            timepoint_rowids_cells = \
+                self._convert_nan_timepoint_to_cgpm_rowid_cells(
+                        frame, nan_timepoint, nan_timepoint_mask)
             cgpm_rowids_cells.extend(timepoint_rowids_cells)
         # Force the cells in bulk.
         cgpm_rowids, cgpm_cells = zip(*cgpm_rowids_cells)
@@ -275,8 +279,9 @@ class TRCRP_Mixture(object):
         # in the window set at nan. Refer to the test case in
         # tests/test_data_transforms.test_incorporate_sampleid_wedged.
 
-    def _update_dataset_nan_timepoint(self, frame, nan_timepoint, nan_timepoint_mask):
-        """Populates existing timepoint with nan values using values from frame."""
+    def _update_dataset_nan_timepoint(
+            self, frame, nan_timepoint, nan_timepoint_mask):
+        """Populates timepoint with nan values in self.dataset using frame."""
         nan_col_names = nan_timepoint_mask[nan_timepoint_mask].index
         nan_col_values = frame.loc[nan_timepoint, nan_col_names]
         self.dataset.loc[nan_timepoint, nan_col_names] = nan_col_values
@@ -317,16 +322,18 @@ class TRCRP_Mixture(object):
 
     def _timepoint_to_rowids(self, timepoint):
         """Return the list of cgpm rowids that timepoint participates in."""
-        # Assuming self.window = 3, the first cgpm rowid that timepoint of value 13
-        # participates in is the rowid of timepoint, and the last cgpm rowid is the
-        # rowid of timepoint+lag.
+
+        # Assuming self.window = 3, the first cgpm rowid that timepoint of value
+        # 13 participates in is the rowid of timepoint, and the last cgpm rowid
+        # is the rowid of timepoint+lag.
+
         # Example:
         #   lag       L2,L1,L0
         #   rowid=7   11,12,13
         #   rowid=8   12,13,14
         #   rowid=9   13,14,15
         timepoints_window = self._get_timepoint_window(timepoint)
-        return [self._timepoint_to_rowid(timepoint) for timepoint in timepoints_window]
+        return [self._timepoint_to_rowid(t) for t in timepoints_window]
 
     def _get_timepoint_window(self, timepoint):
         """Return the previous timepoints in the window of this timepoint."""
@@ -370,7 +377,7 @@ class TRCRP_Mixture(object):
         """Convert timepoint to row representation with timepoint at lag0."""
         timepoints_lag = range(timepoint - self.lag, timepoint + 1)
         return list(itertools.chain.from_iterable(
-            (self.dataset[col].get(s, float('nan')) for s in timepoints_lag)
+            (self.dataset[col].get(t, float('nan')) for t in timepoints_lag)
             for col in self.variables
         ))
 
