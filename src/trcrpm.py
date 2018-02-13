@@ -198,11 +198,34 @@ class TRCRP_Mixture(object):
         varnos = [self._variable_to_index(var) for var in variables]
         return self.engine.dependence_probability_pairwise(cols=varnos)
 
-    def row_similarity_pairwise(self, variables=None):
-        if variables is None:
-            variables = self.variables
-        varnos = [self._variable_to_index(var) for var in variables]
-        return self.engine.row_similarity_pairwise(cols=varnos)
+    def get_temporal_regimes(self, variable, sampids=None):
+        """Return latent temporal regime at `sampids` of the given `variable`.
+
+        Parameters
+        ----------
+        variable : str
+            Name of the time series variable to query.
+        sampids : list of int, optional
+            List of sampids at which to get the latent temporal regime value,
+            defaults to all observed timesteps.
+
+        Returns
+        -------
+        np.ndarray
+            2D array containing latent temporal regime at `sampids` of the given
+            variable, for each chain. The dimensions of the returned array are
+            `(self.chains, len(sampids))`, where `result[i][t]` is the value of
+            the hidden temporal regime at `sampids[t]`, according to chain `i`.
+
+            NOTE: The numerical (integer) values of the regimes are immaterial.
+        """
+        if sampids is None:
+            sampids = self.dataset.index
+        rowids = [self._sampid_to_rowid(sampid) for sampid in sampids]
+        varno = self._variable_to_index(variable)
+        regimes = [[state.view_for(varno).Zr(rowid) for rowid in rowids]
+            for state in self.engine.states]
+        return np.asarray(regimes)
 
     def _incorporate_new_sampids(self, frame):
         """Incorporate fresh sample ids as new cgpm rows."""

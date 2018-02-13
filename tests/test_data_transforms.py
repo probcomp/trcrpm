@@ -344,3 +344,14 @@ def test_get_cgpm_constraints():
         # column a          column b            column c
         0:-12, 2:-44,       4:54, 6:-48,        8:-12, 10:-47
     }
+
+
+def test_get_temporal_regimes_crash():
+    rng = np.random.RandomState(1)
+    trcrpm = TRCRP_Mixture(chains=4, lag=3, variables=FRAME.columns, rng=rng)
+    trcrpm.incorporate(FRAME)
+    for variable in trcrpm.variables:
+        regimes_all = trcrpm.get_temporal_regimes(variable)
+        assert np.shape(regimes_all) == (trcrpm.chains, len(trcrpm.dataset))
+        regimes_some = trcrpm.get_temporal_regimes(variable, sampids=[0,1,2])
+        assert np.shape(regimes_some) == (trcrpm.chains, 3)
