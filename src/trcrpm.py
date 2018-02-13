@@ -109,11 +109,11 @@ class TRCRP_Mixture(object):
 
         Returns
         -------
-        list of tuple of tuple
-            The generated samples. The dimensions of the returned list are
-            `(self.chains*nsamples, len(sampids), len(variables))`, so that
-            `result[i][j][k]` contains a simulation of `variables[k],` at
-            sampid `j`, from chain `i`.
+        np.ndarray
+            3D array of generated samples. The dimensions of the returned list
+            are `(self.chains*nsamples, len(sampids), len(variables))`, so that
+            `result[i][j][k]` contains a simulation of `variables[k],` at sampid
+            `j`, from chain `i`.
 
             // model has 2 chains, so chains * nsamples = 6 samples returned.
             >> model.simulate([1, 4], ['a', 'b'], 3)
@@ -138,8 +138,11 @@ class TRCRP_Mixture(object):
             constraints_list, Ns=Ns, multiprocess=multiprocess)
         samples_raw = list(itertools.chain.from_iterable(
             zip(*sample) for sample in samples_raw_bulk))
-        extract_vals = lambda sample: tuple(sample[t] for t in targets)
-        return [tuple(extract_vals(s) for s in sample) for sample in samples_raw]
+        return [
+            [[sample[t] for t in targets] for sample in sample_chain]
+            for sample_chain in samples_raw
+        ]
+
 
     def simulate_ancestral(self, sampids, variables, nsamples, multiprocess=1):
         """Generate simulations from the posterior distribution ancestrally.
