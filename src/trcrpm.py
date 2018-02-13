@@ -382,7 +382,7 @@ class TRCRP_Mixture(object):
         seen = set(col for block in dependencies for col in block)
         deps_default = [[col] for col in self.variables if col not in seen]
         deps_external = [block for block in dependencies]
-        return list(itertools.chain(deps_default, deps_external))
+        return tuple(itertools.chain(deps_default, deps_external))
 
     def to_metadata(self):
         metadata = dict()
