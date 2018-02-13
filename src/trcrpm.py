@@ -61,6 +61,7 @@ class TRCRP_Mixture(object):
             ['%s.lag.%d' % (varname, i,) for i in xrange(self.lag, -1, -1)]
             for varname in self.variables
         ]))
+        self.variable_index = {var: i for i, var in enumerate(self.variables)}
         for variable in self.variables:
             variable_idx = self._variable_to_index(variable)
             assert self.variables_lagged[variable_idx]=='%s.lag.0' % (variable,)
@@ -334,7 +335,7 @@ class TRCRP_Mixture(object):
     def _variable_to_index(self, variable, lag=0):
         """Convert variable name to cgpm output index."""
         assert 0 <= lag <= self.lag
-        return self.variables.index(variable) * self.window + (self.lag - lag)
+        return self.variable_index[variable] * self.window + (self.lag - lag)
 
     def _variable_to_window_indexes(self, variable):
         """Convert variable name to list of cgpm output indexes in its window."""
