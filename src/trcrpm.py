@@ -176,7 +176,7 @@ class TRCRP_Mixture(object):
         Parameters
         ----------
         variables : list of str, optional
-            List of variables to include in the returned matrix. Defaults to
+            List of variables to include in the returned array. Defaults to
             `self.variables`.
 
         Returns
@@ -186,12 +186,13 @@ class TRCRP_Mixture(object):
             `variables` from each chain. The dimensions of the returned
             array are `(self.chains, len(variables), len(variables))`, so
             that result[i,j,k] = 1 if `variables[j]` and `variables[k]` are
-            dependent in chain `i`, and 0 otherwise.
+            dependent according to chain `i`, and 0 otherwise.
         """
         if variables is None:
             variables = self.variables
         varnos = [self._variable_to_index(var) for var in variables]
-        return self.engine.dependence_probability_pairwise(cols=varnos)
+        D = self.engine.dependence_probability_pairwise(cols=varnos)
+        return np.asarray(D)
 
     def get_temporal_regimes(self, variable, sampids=None):
         """Return latent temporal regime at `sampids` of the given `variable`.
