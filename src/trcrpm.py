@@ -382,12 +382,13 @@ class Hierarchical_TRCRP_Mixture(object):
         ))
 
     def _make_dependencies(self, dependencies):
+        """Return combination of default and user's dependence constraints."""
         if dependencies is None:
             dependencies = []
         seen = set(col for block in dependencies for col in block)
         deps_default = [[col] for col in self.variables if col not in seen]
         deps_external = [block for block in dependencies]
-        return tuple(itertools.chain(deps_default, deps_external))
+        return tuple(tuple(itertools.chain(deps_default, deps_external)))
 
     def to_metadata(self):
         metadata = dict()
