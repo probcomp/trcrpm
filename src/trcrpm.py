@@ -76,11 +76,6 @@ class TRCRP_Mixture(object):
         ----------
         frame : pd.DataFrame
             DataFrame containing new observations.
-
-        Raises
-        ------
-        AssertionError
-            If `frame.columns` is not equal to `self.variables`.
         """
         assert set(frame.columns) == set(self.variables)
         self._incorporate_new_sampids(frame)
