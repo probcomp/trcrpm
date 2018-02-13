@@ -225,7 +225,7 @@ class TRCRP_Mixture(object):
 
     def _incorporate_new_sampids(self, frame):
         """Incorporate fresh sample ids as new cgpm rows."""
-        new_sampids = self._get_new_sampids(frame)
+        new_sampids = frame.index[~frame.index.isin(self.dataset.index)]
         self.dataset = self.dataset.append(frame[self.variables].loc[new_sampids])
         new_rows = [self._get_sampid_row(sampid) for sampid in new_sampids]
         if self.initialized:
@@ -301,13 +301,6 @@ class TRCRP_Mixture(object):
         return [
             sampid2 for sampid2 in windows
             if sampid2 != sampid and sampid in windows[sampid2]
-        ]
-
-    def _get_new_sampids(self, frame):
-        """Return sampids in the frame which are not in the dataset."""
-        return [
-            sampid for sampid in frame.index
-            if sampid not in self.dataset.index
         ]
 
     def _sampid_to_rowid(self, sampid):
