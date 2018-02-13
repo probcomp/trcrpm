@@ -138,11 +138,11 @@ class TRCRP_Mixture(object):
             constraints_list, Ns=Ns, multiprocess=multiprocess)
         samples_raw = list(itertools.chain.from_iterable(
             zip(*sample) for sample in samples_raw_bulk))
-        return [
+        samples = np.asarray([
             [[sample[t] for t in targets] for sample in sample_chain]
             for sample_chain in samples_raw
-        ]
-
+        ])
+        return samples
 
     def simulate_ancestral(self, sampids, variables, nsamples, multiprocess=1):
         """Generate simulations from the posterior distribution ancestrally.
@@ -168,10 +168,11 @@ class TRCRP_Mixture(object):
         self.engine._seed_states()
         samples_raw_list = mapper(_simulate_ancestral_mp, args)
         samples_raw = itertools.chain.from_iterable(samples_raw_list)
-        return [
+        samples = np.asarray([
             [[sample[sampid][t] for t in targets] for sampid in sampids]
             for sample in samples_raw
-        ]
+        ])
+        return samples
 
     def dependence_probability_pairwise(self, variables=None):
         """Compute posterior dependence probabilities between variables.
