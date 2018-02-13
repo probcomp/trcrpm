@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from trcrpm import Hierarchical_TRCRP_Mixture
 from trcrpm import TRCRP_Mixture
 
 nan = float('nan')
@@ -41,8 +42,6 @@ def test_column_indexing():
     assert trcrpm._variable_to_index('c') == 2
     assert trcrpm._variable_indexes() == [0, 1, 2]
 
-    assert trcrpm._get_variable_dependence_constraints() == []
-
     trcrpm = TRCRP_Mixture(chains=1, lag=2, variables=FRAME.columns, rng=rng)
     assert trcrpm.variables_lagged == [
         'a.lag.2', 'a.lag.1', 'a.lag.0',
@@ -66,9 +65,6 @@ def test_column_indexing():
     assert trcrpm._variable_to_window_indexes('a') == [2,1,0]
     assert trcrpm._variable_to_window_indexes('b') == [5,4,3]
     assert trcrpm._variable_to_window_indexes('c') == [8,7,6]
-
-    assert trcrpm._get_variable_dependence_constraints() == \
-        [[2,1,0], [5,4,3], [8,7,6]]
 
     trcrpm = TRCRP_Mixture(chains=1, lag=5, variables=FRAME.columns, rng=rng)
     assert trcrpm.variables_lagged == [
@@ -98,30 +94,45 @@ def test_column_indexing():
     assert trcrpm._variable_to_window_indexes('b') == [11,10,9,8,7,6]
     assert trcrpm._variable_to_window_indexes('c') == [17,16,15,14,13,12]
 
-    assert trcrpm._get_variable_dependence_constraints() == \
-        [[5,4,3,2,1,0], [11,10,9,8,7,6], [17,16,15,14,13,12]]
-
 
 def test_dependence_constraints():
     rng = np.random.RandomState(2)
 
+    # All variables in TRCRP_Mixture are dependent.
+    trcrpm = TRCRP_Mixture(chains=1, lag=0, variables=FRAME.columns, rng=rng)
+    assert trcrpm._get_variable_dependence_constraints() == [[0,1,2]]
+
+    # All variables in TRCRP_Mixture are dependent.
+    trcrpm = TRCRP_Mixture(chains=1, lag=2, variables=FRAME.columns, rng=rng)
+    assert trcrpm._get_variable_dependence_constraints() == \
+        [[2,1,0, 5,4,3, 8,7,6]]
+
+    # All variables in TRCRP_Mixture are dependent.
+    trcrpm = TRCRP_Mixture(chains=1, lag=5, variables=FRAME.columns, rng=rng)
+    assert trcrpm._get_variable_dependence_constraints() == \
+        [[5,4,3,2,1,0, 11,10,9,8,7,6, 17,16,15,14,13,12]]
+
     # Lag 0 dependencies should skip singleton 'c'.
-    trcrpm = TRCRP_Mixture(chains=1, lag=0, variables=FRAME.columns, rng=rng,
+    trcrpm = Hierarchical_TRCRP_Mixture(
+        chains=1, lag=0, variables=FRAME.columns, rng=rng,
         dependencies=[['a','b'],['c']])
     assert trcrpm._get_variable_dependence_constraints() == [[0,1]]
 
     # Lag 0 dependencies with all constrained.
-    trcrpm = TRCRP_Mixture(chains=1, lag=0, variables=FRAME.columns, rng=rng,
+    trcrpm = Hierarchical_TRCRP_Mixture(
+        chains=1, lag=0, variables=FRAME.columns, rng=rng,
         dependencies=[['a','b','c']])
     assert trcrpm._get_variable_dependence_constraints() == [[0,1,2]]
 
     # Lag 1 dependencies with two constraints.
-    trcrpm = TRCRP_Mixture(chains=1, lag=1, variables=FRAME.columns, rng=rng,
+    trcrpm = Hierarchical_TRCRP_Mixture(
+        chains=1, lag=1, variables=FRAME.columns, rng=rng,
         dependencies=[['a','b']])
     assert trcrpm._get_variable_dependence_constraints() == [[5,4], [1,0,3,2]]
 
     # Lag 1 dependency with single constraint.
-    trcrpm = TRCRP_Mixture(chains=1, lag=1, variables=FRAME.columns, rng=rng,
+    trcrpm = Hierarchical_TRCRP_Mixture(
+        chains=1, lag=1, variables=FRAME.columns, rng=rng,
         dependencies=[['a']])
     assert trcrpm._get_variable_dependence_constraints() == [
         [3,2] , [5,4], [1,0]
@@ -131,7 +142,8 @@ def test_dependence_constraints():
     # incorporate is going to use multiprocess so parallel_map captures the
     # ValueError and throws a RuntimeError.
     with pytest.raises(RuntimeError):
-        trcrpm = TRCRP_Mixture(chains=1, lag=0, variables=FRAME.columns, rng=rng,
+        trcrpm = Hierarchical_TRCRP_Mixture(
+            chains=1, lag=0, variables=FRAME.columns, rng=rng,
             dependencies=[['a','c'], ['a','b']])
         trcrpm.incorporate(FRAME)
 

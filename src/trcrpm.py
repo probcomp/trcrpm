@@ -12,8 +12,8 @@ from cgpm.crosscat.engine import Engine
 from cgpm.utils.parallel_map import parallel_map
 
 
-class TRCRP_Mixture(object):
-    """Temporally-Reweighted Chinese Restaurant Process Mixture.
+class Hierarchical_TRCRP_Mixture(object):
+    """Hierarchical Temporally-Reweighted Chinese Restaurant Process Mixture.
 
     The data frame being modeled has an integer-valued index indicating the
     discrete time step, and has one column per time-varying variable, as shown
@@ -424,6 +424,21 @@ class TRCRP_Mixture(object):
         model.engine = Engine.from_metadata(metadata['engine']) \
             if model.initialized else None
         return model
+
+
+class TRCRP_Mixture(Hierarchical_TRCRP_Mixture):
+    """Temporally-Reweighted Chinese Restaurant Process Mixture.
+
+    The TRCRP_Mixture is a special case of the Hierarchical_TRCRP_Mixture where
+    all time series are deterministically constrained to be modeled jointly.
+
+    See Also
+    --------
+    Hierarchical_TRCRP_Mixture
+    """
+    def __init__(self, chains, lag, variables, rng):
+        super(TRCRP_Mixture, self).__init__(
+            chains, lag, variables, rng, dependencies=[variables])
 
 
 # Multiprocessing helpers.
