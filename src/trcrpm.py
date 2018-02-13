@@ -136,17 +136,17 @@ class TRCRP_Mixture(object):
             for sample in samples_raw
         ]
 
-    def dependence_probability_pairwise(self, colnames=None):
-        if colnames is None:
-            colnames = self.variables
-        colnos = [self._variable_to_index(c) for c in colnames]
-        return self.engine.dependence_probability_pairwise(colnos)
+    def dependence_probability_pairwise(self, variables=None):
+        if variables is None:
+            variables = self.variables
+        varnos = [self._variable_to_index(var) for var in variables]
+        return self.engine.dependence_probability_pairwise(cols=varnos)
 
-    def row_similarity_pairwise(self, colnames=None):
-        if colnames is None:
-            colnames = self.variables
-        colnos = [self._variable_to_index(c) for c in colnames]
-        return self.engine.row_similarity_pairwise(cols=colnos)
+    def row_similarity_pairwise(self, variables=None):
+        if variables is None:
+            variables = self.variables
+        varnos = [self._variable_to_index(var) for var in variables]
+        return self.engine.row_similarity_pairwise(cols=varnos)
 
     def _incorporate_new_sampids(self, frame):
         """Incorporate fresh sample ids as new cgpm rows."""
