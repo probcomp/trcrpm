@@ -32,16 +32,22 @@ class TRCRP_Mixture(object):
 
     def __init__(self, chains, lag, variables, rng, dependencies=None):
         """Initialize a TRCRP Mixture instance.
-            chains::int
-                Number of MCMC chains.
-            lag::int
-                Order of the AR process.
-            variables::list<str>
-                Name of time series variables.
-            rng::np.random.RandomState
-                Source of entropy.
-            dependencies::list<tuple<str>>
-                Blocks of variables which are constrained to be dependent.
+
+        Parameters
+        ----------
+        chains: int
+            Number of parallel MCMC chains to use for inference.
+        lag : int
+            Number of time points in the history to use for reweighting the
+            CRP. If lag is zero, then all temporal dependencies are removed
+            and the model becomes a standard CRP mixture.
+        variables : list of str
+            Human-readable names of the time series to be modeled.
+        rng : np.random.RandomState
+            Source of entropy
+        dependencies : list of tuple<string>, optional
+            Blocks of variables which are deterministically constrained to be
+            modeled jointly. Defaults to no deterministic constraints.
         """
         # From constructor.
         self.chains = chains
@@ -49,7 +55,7 @@ class TRCRP_Mixture(object):
         self.variables = list(variables)
         self.rng = rng
         self.dependencies = self._make_dependencies(dependencies)
-        # Derived fields.
+        # Derived attributes.
         self.window = self.lag + 1
         self.variables_lagged = list(itertools.chain.from_iterable([
             ['%s.lag.%d' % (varname, i,) for i in xrange(self.lag, -1, -1)]
@@ -58,13 +64,24 @@ class TRCRP_Mixture(object):
         for variable in self.variables:
             variable_idx = self._variable_to_index(variable)
             assert self.variables_lagged[variable_idx]=='%s.lag.0' % (variable,)
-        # Internal fields.
+        # Internal attributes.
         self.dataset = pd.DataFrame()
         self.engine = None
         self.initialized = None
 
     def incorporate(self, frame):
-        """Incorporate observations."""
+        """Incorporate new observations.
+
+        Parameters
+        ----------
+        frame : pd.DataFrame
+            DataFrame containing new observations.
+
+        Raises
+        ------
+        AssertionError
+            If `frame.columns` is not equal to `self.variables`.
+        """
         assert set(frame.columns) == set(self.variables)
         self._incorporate_new_sampids(frame)
         # XXX Improve this function.
@@ -84,18 +101,38 @@ class TRCRP_Mixture(object):
             raise ValueError('Unknown backend: %s' % (backend,))
 
     def simulate(self, sampids, variables, nsamples, multiprocess=1):
-        """Simulate sampids and variables in a non-ancestral manner.
+        """Generate simulations from the posterior distribution.
 
-        // panelcat has 2 chains, so chains * nsamples = 4 samples returned.
-        >> panelcat.simulate([1, 4], ['a', 'b'], 2)
+        Parameters
+        ----------
+        sampids : list of int
+            List of integer-valued time steps to simulate
+        variables : list of str
+            Names of time series which to simulate from.
+        nsamples : int
+            Number of predictive samples to generate from each chain.
 
-        #  |<--- chain 0 --->| |<--- chain 1 ---->|
-        [sample0.0, sample0.1, sample1.0, sample1.1]
+        Returns
+        -------
+        list of tuple of tuple
+            The generated samples. The dimensions of the returned list are
+            `(self.chains*nsamples, len(sampids), len(variables))`, so that
+            `result[i][j][k]` contains a simulation of `variables[k],` at
+            sampid `j`, from chain `i`.
 
-        sample0.0: ((val_a1, val_b1), (val_a4, val_b4))
-        sample0.1: ((val_a1, val_b1), (val_a4, val_b4))
-        sample1.0: ((val_a1, val_b1), (val_a4, val_b4))
-        sample1.1: ((val_a1, val_b1), (val_a4, val_b4))
+            // model has 2 chains, so chains * nsamples = 6 samples returned.
+            >> model.simulate([1, 4], ['a', 'b'], 3)
+
+            |<-----------chain 0----------->||<-----------chain 1----------->|
+            [sample0.0, sample0.1, sample0.2, sample1.0, sample1.1, sample1.2]
+
+            sample0.0: ((sim0.0_a1, sim0.0_b1), (sim0.0_a40, sim0.0_b40))
+            sample0.1: ((sim0.1_a1, sim0.1_b1), (sim0.1_a40, sim0.1_b40))
+            sample0.2: ((sim0.2_a1, sim0.2_b1), (sim0.2_a40, sim0.2_b40))
+
+            sample1.0: ((sim1.0_a1, sim1.0_b1), (sim1.0_a40, sim1.0_b40))
+            sample1.1: ((sim1.1_a1, sim1.1_b1), (sim1.1_a40, sim1.1_b40))
+            sample1.2: ((sim1.2_a1, sim1.2_b1), (sim1.2_a40, sim1.2_b40))
         """
         cgpm_rowids = [self._sampid_to_rowid(sampid) for sampid in sampids]
         constraints_list = [self._get_cgpm_constraints(sampid) for sampid in sampids]
@@ -110,9 +147,11 @@ class TRCRP_Mixture(object):
         return [tuple(extract_vals(s) for s in sample) for sample in samples]
 
     def simulate_ancestral(self, sampids, variables, nsamples, multiprocess=1):
-        """Simulate sampids and variables in an ancestral manner.
+        """Generate simulations from the posterior distribution ancestrally.
 
-        Returned samples follow same convention as PanelCat.simulate
+        See Also
+        --------
+        simulate
         """
         assert sampids == sorted(sampids)
         targets = [self._variable_to_index(var) for var in variables]
@@ -137,6 +176,23 @@ class TRCRP_Mixture(object):
         ]
 
     def dependence_probability_pairwise(self, variables=None):
+        """Compute posterior dependence probabilities between variables.
+
+        Parameters
+        ----------
+        variables : list of str, optional
+            List of variables to include in the returned matrix. Defaults to
+            `self.variables`.
+
+        Returns
+        -------
+        np.ndarray
+            3D array containing pairwise dependence probabilities of
+            `variables` from each chain. The dimensions of the returned
+            array are `(self.chains, len(variables), len(variables))`, so
+            that result[i,j,k] = 1 if `variables[j]` and `variables[k]` are
+            dependent in chain `i`, and 0 otherwise.
+        """
         if variables is None:
             variables = self.variables
         varnos = [self._variable_to_index(var) for var in variables]
@@ -346,8 +402,13 @@ class TRCRP_Mixture(object):
         return model
 
 
+# Multiprocessing helpers.
+# These functions must be defined top-level in the module to work with
+# parallel_map.
+
 def _simulate_ancestral_mp((state, sampids, variables, rowids, targets,
         constraints, parents, variable_to_index, nsamples)):
+    """Simulate sampids and variables ancestrally (multiple samples)."""
     return [
         _simulate_ancestral_one(
             state, sampids, variables, rowids, targets, constraints, parents,
@@ -358,7 +419,7 @@ def _simulate_ancestral_mp((state, sampids, variables, rowids, targets,
 
 def _simulate_ancestral_one(state, sampids, variables, rowids, targets,
         constraints, parents, variable_to_index):
-    """Simulate sampids and variables in an ancestral manner."""
+    """Simulate sampids and variables ancestrally (one sample)."""
     samples = dict()
     for i, sampid in enumerate(sampids):
         simulated_parents = {
