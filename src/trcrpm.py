@@ -79,9 +79,9 @@ class TRCRP_Mixture(object):
             DataFrame containing new observations.
         """
         assert set(frame.columns) == set(self.variables)
-        self._incorporate_new_sampids(frame)
+        self._incorporate_new_timepoints(frame)
         # XXX Improve this function.
-        self._incorporate_existing_sampids(frame)
+        self._incorporate_existing_timepoints(frame)
         assert self.engine.states[0].n_rows() == len(self.dataset)
 
     def transition(self, **kwargs):
@@ -96,12 +96,12 @@ class TRCRP_Mixture(object):
         else:
             raise ValueError('Unknown backend: %s' % (backend,))
 
-    def simulate(self, sampids, variables, nsamples, multiprocess=1):
+    def simulate(self, timepoints, variables, nsamples, multiprocess=1):
         """Generate simulations from the posterior distribution.
 
         Parameters
         ----------
-        sampids : list of int
+        timepoints : list of int
             List of integer-valued time steps to simulate
         variables : list of str
             Names of time series which to simulate from.
@@ -112,8 +112,8 @@ class TRCRP_Mixture(object):
         -------
         np.ndarray
             3D array of generated samples. The dimensions of the returned list
-            are `(self.chains*nsamples, len(sampids), len(variables))`, so that
-            `result[i][j][k]` contains a simulation of `variables[k],` at sampid
+            are `(self.chains*nsamples, len(timepoints), len(variables))`, so that
+            `result[i][j][k]` contains a simulation of `variables[k],` at timepoint
             `j`, from chain `i`.
 
             // model has 2 chains, so chains * nsamples = 6 samples returned.
@@ -130,8 +130,8 @@ class TRCRP_Mixture(object):
             sample1.1: ((sim1.1_a1, sim1.1_b1), (sim1.1_a40, sim1.1_b40))
             sample1.2: ((sim1.2_a1, sim1.2_b1), (sim1.2_a40, sim1.2_b40))
         """
-        cgpm_rowids = [self._sampid_to_rowid(sampid) for sampid in sampids]
-        constraints_list = [self._get_cgpm_constraints(sampid) for sampid in sampids]
+        cgpm_rowids = [self._timepoint_to_rowid(timepoint) for timepoint in timepoints]
+        constraints_list = [self._get_cgpm_constraints(timepoint) for timepoint in timepoints]
         targets = [self._variable_to_index(var) for var in variables]
         targets_list = [targets] * len(cgpm_rowids)
         Ns = [nsamples] * len(cgpm_rowids)
@@ -145,23 +145,23 @@ class TRCRP_Mixture(object):
         ])
         return samples
 
-    def simulate_ancestral(self, sampids, variables, nsamples, multiprocess=1):
+    def simulate_ancestral(self, timepoints, variables, nsamples, multiprocess=1):
         """Generate simulations from the posterior distribution ancestrally.
 
         See Also
         --------
         simulate
         """
-        assert sampids == sorted(sampids)
+        assert timepoints == sorted(timepoints)
         targets = [self._variable_to_index(var) for var in variables]
-        rowids = [self._sampid_to_rowid(sampid) for sampid in sampids]
-        constraints = [self._get_cgpm_constraints(sampid) for sampid in sampids]
-        windows = {sampid: set(self._get_sampid_window(sampid))
-            for sampid in sampids}
-        parents = {sampid: self._get_parents_from_windows(sampid, windows)
-            for sampid in sampids}
+        rowids = [self._timepoint_to_rowid(timepoint) for timepoint in timepoints]
+        constraints = [self._get_cgpm_constraints(timepoint) for timepoint in timepoints]
+        windows = {timepoint: set(self._get_timepoint_window(timepoint))
+            for timepoint in timepoints}
+        parents = {timepoint: self._get_parents_from_windows(timepoint, windows)
+            for timepoint in timepoints}
         args = [
-            (state, sampids, variables, rowids, targets,
+            (state, timepoints, variables, rowids, targets,
                 constraints, parents, self._variable_to_index, nsamples)
             for state in self.engine.states
         ]
@@ -170,7 +170,7 @@ class TRCRP_Mixture(object):
         samples_raw_list = mapper(_simulate_ancestral_mp, args)
         samples_raw = itertools.chain.from_iterable(samples_raw_list)
         samples = np.asarray([
-            [[sample[sampid][t] for t in targets] for sampid in sampids]
+            [[sample[timepoint][t] for t in targets] for timepoint in timepoints]
             for sample in samples_raw
         ])
         return samples
@@ -199,46 +199,46 @@ class TRCRP_Mixture(object):
         D = self.engine.dependence_probability_pairwise(cols=varnos)
         return np.asarray(D)
 
-    def get_temporal_regimes(self, variable, sampids=None):
-        """Return latent temporal regime at `sampids` of the given `variable`.
+    def get_temporal_regimes(self, variable, timepoints=None):
+        """Return latent temporal regime at `timepoints` of the given `variable`.
 
         Parameters
         ----------
         variable : str
             Name of the time series variable to query.
-        sampids : list of int, optional
-            List of sampids at which to get the latent temporal regime value,
+        timepoints : list of int, optional
+            List of timepoints at which to get the latent temporal regime value,
             defaults to all observed timesteps.
 
         Returns
         -------
         np.ndarray
-            2D array containing latent temporal regime at `sampids` of the given
+            2D array containing latent temporal regime at `timepoints` of the given
             variable, for each chain. The dimensions of the returned array are
-            `(self.chains, len(sampids))`, where `result[i][t]` is the value of
-            the hidden temporal regime at `sampids[t]`, according to chain `i`.
+            `(self.chains, len(timepoints))`, where `result[i][t]` is the value of
+            the hidden temporal regime at `timepoints[t]`, according to chain `i`.
 
             NOTE: The numerical (integer) values of the regimes are immaterial.
         """
-        if sampids is None:
-            sampids = self.dataset.index
-        rowids = [self._sampid_to_rowid(sampid) for sampid in sampids]
+        if timepoints is None:
+            timepoints = self.dataset.index
+        rowids = [self._timepoint_to_rowid(timepoint) for timepoint in timepoints]
         varno = self._variable_to_index(variable)
         regimes = [[state.view_for(varno).Zr(rowid) for rowid in rowids]
             for state in self.engine.states]
         return np.asarray(regimes)
 
-    def _incorporate_new_sampids(self, frame):
+    def _incorporate_new_timepoints(self, frame):
         """Incorporate fresh sample ids as new cgpm rows."""
-        new_sampids = frame.index[~frame.index.isin(self.dataset.index)]
-        self.dataset = self.dataset.append(frame[self.variables].loc[new_sampids])
-        new_rows = [self._get_sampid_row(sampid) for sampid in new_sampids]
+        new_timepoints = frame.index[~frame.index.isin(self.dataset.index)]
+        self.dataset = self.dataset.append(frame[self.variables].loc[new_timepoints])
+        new_rows = [self._get_timepoint_row(timepoint) for timepoint in new_timepoints]
         if self.initialized:
             outputs = self.engine.states[0].outputs
-            for row, sampid in zip(new_rows, new_sampids):
+            for row, timepoint in zip(new_rows, new_timepoints):
                 rowid_cgpm = self.engine.states[0].n_rows()
                 assert len(row) == len(outputs)
-                assert rowid_cgpm == self._sampid_to_rowid(sampid)
+                assert rowid_cgpm == self._timepoint_to_rowid(timepoint)
                 row_cgpm = {i: row[i] for i in outputs if not np.isnan(row[i])}
                 self.engine.incorporate(rowid_cgpm, row_cgpm)
         # XXX Do not initialize here! Instead, consider including a dummy row of
@@ -255,19 +255,19 @@ class TRCRP_Mixture(object):
             )
             self.initialized = True
 
-    def _incorporate_existing_sampids(self, frame):
-        """Update existing sampids with NaN entries in cgpm cells."""
+    def _incorporate_existing_timepoints(self, frame):
+        """Update existing timepoints with NaN entries in cgpm cells."""
         nan_mask = pd.isnull(self.dataset) & ~pd.isnull(frame)
         nan_mask = nan_mask[nan_mask.any(axis=1)]
         if len(nan_mask) == 0:
             return
         cgpm_rowids_cells = []
-        # For each new sampid, get the cgpm rowids and cell values to force.
-        for nan_sampid, nan_sampid_mask in nan_mask.iterrows():
-            self._update_dataset_nan_sampid(frame, nan_sampid, nan_sampid_mask)
-            sampid_rowids_cells = self._convert_nan_sampid_to_cgpm_rowid_cells(
-                frame, nan_sampid, nan_sampid_mask)
-            cgpm_rowids_cells.extend(sampid_rowids_cells)
+        # For each new timepoint, get the cgpm rowids and cell values to force.
+        for nan_timepoint, nan_timepoint_mask in nan_mask.iterrows():
+            self._update_dataset_nan_timepoint(frame, nan_timepoint, nan_timepoint_mask)
+            timepoint_rowids_cells = self._convert_nan_timepoint_to_cgpm_rowid_cells(
+                frame, nan_timepoint, nan_timepoint_mask)
+            cgpm_rowids_cells.extend(timepoint_rowids_cells)
         # Force the cells in bulk.
         cgpm_rowids, cgpm_cells = zip(*cgpm_rowids_cells)
         self.engine.force_cell_bulk(cgpm_rowids, cgpm_cells)
@@ -275,20 +275,20 @@ class TRCRP_Mixture(object):
         # in the window set at nan. Refer to the test case in
         # tests/test_data_transforms.test_incorporate_sampleid_wedged.
 
-    def _update_dataset_nan_sampid(self, frame, nan_sampid, nan_sampid_mask):
-        """Populates existing sampid with nan values using values from frame."""
-        nan_col_names = nan_sampid_mask[nan_sampid_mask].index
-        nan_col_values = frame.loc[nan_sampid, nan_col_names]
-        self.dataset.loc[nan_sampid, nan_col_names] = nan_col_values
+    def _update_dataset_nan_timepoint(self, frame, nan_timepoint, nan_timepoint_mask):
+        """Populates existing timepoint with nan values using values from frame."""
+        nan_col_names = nan_timepoint_mask[nan_timepoint_mask].index
+        nan_col_values = frame.loc[nan_timepoint, nan_col_names]
+        self.dataset.loc[nan_timepoint, nan_col_names] = nan_col_values
 
-    def _convert_nan_sampid_to_cgpm_rowid_cells(
-            self, frame, nan_sampid, nan_sampid_mask):
-        """Returns the cgpm rowid of all windows that nan_sampid participates
+    def _convert_nan_timepoint_to_cgpm_rowid_cells(
+            self, frame, nan_timepoint, nan_timepoint_mask):
+        """Returns the cgpm rowid of all windows that nan_timepoint participates
         in, and dict containing columns and values to populate."""
-        nan_col_names = nan_sampid_mask[nan_sampid_mask].index
+        nan_col_names = nan_timepoint_mask[nan_timepoint_mask].index
         nan_col_idxs = [self._variable_to_index(col) for col in nan_col_names]
-        nan_col_values = frame.loc[nan_sampid, nan_col_names].as_matrix()
-        cgpm_rowids = self._sampid_to_rowids(nan_sampid)
+        nan_col_values = frame.loc[nan_timepoint, nan_col_names].as_matrix()
+        cgpm_rowids = self._timepoint_to_rowids(nan_timepoint)
         cgpm_rowids_cells = [
             {col_idx - lag: value
                 for col_idx, value in zip(nan_col_idxs, nan_col_values)}
@@ -301,36 +301,36 @@ class TRCRP_Mixture(object):
             if rowid is not None
         ]
 
-    def _get_parents_from_windows(self, sampid, windows):
-        """Return list of sampids of parents of the given sampid."""
+    def _get_parents_from_windows(self, timepoint, windows):
+        """Return list of timepoints of parents of the given timepoint."""
         return [
-            sampid2 for sampid2 in windows
-            if sampid2 != sampid and sampid in windows[sampid2]
+            timepoint2 for timepoint2 in windows
+            if timepoint2 != timepoint and timepoint in windows[timepoint2]
         ]
 
-    def _sampid_to_rowid(self, sampid):
-        """Return the cgpm rowid representing the sampid."""
+    def _timepoint_to_rowid(self, timepoint):
+        """Return the cgpm rowid representing the timepoint."""
         try:
-            return self.dataset.index.get_loc(sampid)
+            return self.dataset.index.get_loc(timepoint)
         except KeyError:
             return None
 
-    def _sampid_to_rowids(self, sampid):
-        """Return the list of cgpm rowids that sampid participates in."""
-        # Assuming self.window = 3, the first cgpm rowid that sampid of value 13
-        # participates in is the rowid of sampid, and the last cgpm rowid is the
-        # rowid of sampid+lag.
+    def _timepoint_to_rowids(self, timepoint):
+        """Return the list of cgpm rowids that timepoint participates in."""
+        # Assuming self.window = 3, the first cgpm rowid that timepoint of value 13
+        # participates in is the rowid of timepoint, and the last cgpm rowid is the
+        # rowid of timepoint+lag.
         # Example:
         #   lag       L2,L1,L0
         #   rowid=7   11,12,13
         #   rowid=8   12,13,14
         #   rowid=9   13,14,15
-        sampids_window = self._get_sampid_window(sampid)
-        return [self._sampid_to_rowid(sampid) for sampid in sampids_window]
+        timepoints_window = self._get_timepoint_window(timepoint)
+        return [self._timepoint_to_rowid(timepoint) for timepoint in timepoints_window]
 
-    def _get_sampid_window(self, sampid):
-        """Return the previous sampids in the window of this sampid."""
-        return range(sampid, sampid + self.window)
+    def _get_timepoint_window(self, timepoint):
+        """Return the previous timepoints in the window of this timepoint."""
+        return range(timepoint, timepoint + self.window)
 
     def _variable_to_index(self, variable, lag=0):
         """Convert variable name to cgpm output index."""
@@ -356,21 +356,21 @@ class TRCRP_Mixture(object):
         # Filter out any singleton dependencies.
         return [colnos for colnos in dependencies if len(colnos) > 1]
 
-    def _get_cgpm_constraints(self, sampid):
-        # An already incorporated sampid requires no constraints.
-        if sampid in self.dataset.index:
+    def _get_cgpm_constraints(self, timepoint):
+        # An already incorporated timepoint requires no constraints.
+        if timepoint in self.dataset.index:
             return None
-        # Retrieve existing observations in window of a fresh sampid.
-        row_values = self._get_sampid_row(sampid)
+        # Retrieve existing observations in window of a fresh timepoint.
+        row_values = self._get_timepoint_row(timepoint)
         assert len(row_values) == len(self.variables_lagged)
         # XXX Require user to specify columns to ignore.
         return {i : v for i, v in enumerate(row_values) if not np.isnan(v)}
 
-    def _get_sampid_row(self, sampid):
-        """Convert sampid to row representation with sampid at lag0."""
-        sampids_lag = range(sampid - self.lag, sampid + 1)
+    def _get_timepoint_row(self, timepoint):
+        """Convert timepoint to row representation with timepoint at lag0."""
+        timepoints_lag = range(timepoint - self.lag, timepoint + 1)
         return list(itertools.chain.from_iterable(
-            (self.dataset[col].get(s, float('nan')) for s in sampids_lag)
+            (self.dataset[col].get(s, float('nan')) for s in timepoints_lag)
             for col in self.variables
         ))
 
@@ -423,30 +423,30 @@ class TRCRP_Mixture(object):
 # These functions must be defined top-level in the module to work with
 # parallel_map.
 
-def _simulate_ancestral_mp((state, sampids, variables, rowids, targets,
+def _simulate_ancestral_mp((state, timepoints, variables, rowids, targets,
         constraints, parents, variable_to_index, nsamples)):
-    """Simulate sampids and variables ancestrally (multiple samples)."""
+    """Simulate timepoints and variables ancestrally (multiple samples)."""
     return [
         _simulate_ancestral_one(
-            state, sampids, variables, rowids, targets, constraints, parents,
+            state, timepoints, variables, rowids, targets, constraints, parents,
             variable_to_index)
         for _i in xrange(nsamples)
     ]
 
 
-def _simulate_ancestral_one(state, sampids, variables, rowids, targets,
+def _simulate_ancestral_one(state, timepoints, variables, rowids, targets,
         constraints, parents, variable_to_index):
-    """Simulate sampids and variables ancestrally (one sample)."""
+    """Simulate timepoints and variables ancestrally (one sample)."""
     samples = dict()
-    for i, sampid in enumerate(sampids):
+    for i, timepoint in enumerate(timepoints):
         simulated_parents = {
-            variable_to_index(var, sampid-sampid_parent) :
-                samples[sampid_parent][var_idx]
-            for sampid_parent in parents[sampid]
+            variable_to_index(var, timepoint-timepoint_parent) :
+                samples[timepoint_parent][var_idx]
+            for timepoint_parent in parents[timepoint]
             for var, var_idx in zip(variables, targets)
         }
         if constraints[i] is not None:
             constraints[i].update(simulated_parents)
         sample = state.simulate(rowids[i], targets, constraints[i])
-        samples[sampid] = sample
+        samples[timepoint] = sample
     return samples

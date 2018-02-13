@@ -263,13 +263,13 @@ def test_incorporate_sampleid_wedged():
     assert np.allclose(tabulated_data, expected_data, equal_nan=True)
 
 
-def test_sampid_to_rowid():
+def test_timepoint_to_rowid():
     rng = np.random.RandomState(2)
     trcrpm = TRCRP_Mixture(chains=1, lag=0, variables=FRAME.columns, rng=rng)
     trcrpm.incorporate(FRAME)
     for i in xrange(len(FRAME)):
-        assert trcrpm._sampid_to_rowid(i) == i
-        assert trcrpm._sampid_to_rowid(i) == i
+        assert trcrpm._timepoint_to_rowid(i) == i
+        assert trcrpm._timepoint_to_rowid(i) == i
 
 
 def test_simulate_dimensions():
@@ -277,12 +277,12 @@ def test_simulate_dimensions():
     trcrpm = TRCRP_Mixture(chains=4, lag=3, variables=FRAME.columns, rng=rng)
     trcrpm.incorporate(FRAME)
 
-    def check_dims_correct(sampids, variables, nsamples, simulator):
-        samples = simulator(sampids, variables, nsamples, multiprocess=0)
+    def check_dims_correct(timepoints, variables, nsamples, simulator):
+        samples = simulator(timepoints, variables, nsamples, multiprocess=0)
         # Number of chains is 4.
         assert len(samples) == nsamples * 4
         for sample in samples:
-            assert len(sample) == len(sampids)
+            assert len(sample) == len(timepoints)
             for subsample in sample:
                 assert len(subsample) == len(variables)
 
@@ -303,17 +303,17 @@ def test_get_cgpm_constraints():
     # column a          column b        column c
     # 0 1 2 3           4 5 6 7         8 9 10 11
 
-    # Incorporated sampids should have no constraints.
-    for sampid in trcrpm.dataset.index:
-        assert trcrpm._get_cgpm_constraints(sampid) is None
+    # Incorporated timepoints should have no constraints.
+    for timepoint in trcrpm.dataset.index:
+        assert trcrpm._get_cgpm_constraints(timepoint) is None
 
-    # Fresh sampid 10 should have appropriate constraints.
+    # Fresh timepoint 10 should have appropriate constraints.
     constraints_10 = trcrpm._get_cgpm_constraints(10)
     assert constraints_10 == {
         # column a      column b        column c
         0:29, 1:83,     5:46, 6:54,     8:86 , 9:38
     }
-    # Incorporating data into sampid 9 should update constraints for 10.
+    # Incorporating data into timepoint 9 should update constraints for 10.
     frame_new = pd.DataFrame(
         [[-12, nan, -12]],
         columns=['a', 'b', 'c'],
@@ -326,13 +326,13 @@ def test_get_cgpm_constraints():
         0:29, 1:83, 2:-12,    5:46, 6:54,        8:86 , 9:38, 10:-12
     }
 
-    # Fresh sampid 12 should have appropriate constraints.
+    # Fresh timepoint 12 should have appropriate constraints.
     constraints_12 = trcrpm._get_cgpm_constraints(12)
     assert constraints_12 == {
         # column a          column b            column c
         0:-12,              4:54,               8:-12
     }
-    # Incorporating data into sampid 11 should update constraints for 12.
+    # Incorporating data into timepoint 11 should update constraints for 12.
     frame_new = pd.DataFrame(
         [[-44, -48, -47]],
         columns=['a', 'b', 'c'],
@@ -353,5 +353,5 @@ def test_get_temporal_regimes_crash():
     for variable in trcrpm.variables:
         regimes_all = trcrpm.get_temporal_regimes(variable)
         assert np.shape(regimes_all) == (trcrpm.chains, len(trcrpm.dataset))
-        regimes_some = trcrpm.get_temporal_regimes(variable, sampids=[0,1,2])
+        regimes_some = trcrpm.get_temporal_regimes(variable, timepoints=[0,1,2])
         assert np.shape(regimes_some) == (trcrpm.chains, 3)
