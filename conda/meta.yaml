@@ -8,7 +8,7 @@ source:
 build:
   # Investigate why using `python setup.py build` causes pytest to fail to find
   # trcrpm when running `conda develop . -c probcomp/label/edge`.
-  script: pip install .
+  script: python setup.py install
 
 requirements:
   build:
