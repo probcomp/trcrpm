@@ -1,0 +1,41 @@
+package:
+  name: trcrpm
+  version: {{ CONDA_PACKAGE_VERSION }}
+
+source:
+  path: ../
+
+build:
+  # Investigate why using `python setup.py build` causes pytest to fail to find
+  # trcrpm when running `conda develop . -c probcomp/label/edge`.
+  script: pip install .
+
+requirements:
+  build:
+    - cython 0.23.*
+    - git
+    - numpy 1.11.*
+    - python 2.7.*
+    - pip
+  run:
+    - cgpm
+    - crosscat
+    - matplotlib 1.5.*
+    - numpy 1.11.*
+    - pandas 0.18.*
+    - six 1.10.*
+
+test:
+  requires:
+    - cgpm
+    - crosscat
+    - numpy 1.11.*
+    - pandas 0.18.*
+    - pytest 2.8.*
+  commands:
+    - python -m pytest --pyargs trcrpm
+
+about:
+  home: https://github.com/probcomp/trcrpm
+  license: Apache
+  license_file: LICENSE.txt
