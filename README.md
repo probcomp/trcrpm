@@ -1,7 +1,6 @@
 # Temporally-Reweighted Chinese Restaurant Process Mixture Model
 
 [![Build Status](https://travis-ci.org/probcomp/trcrpm.svg?branch=master)](https://travis-ci.org/probcomp/trcrpm)
-[![Anaconda-Server Badge](https://anaconda.org/probcomp/trcrpm/badges/installer/conda.svg)](https://conda.anaconda.org/probcomp)
 [![Anaconda-Server Badge](https://anaconda.org/probcomp/trcrpm/badges/version.svg)](https://anaconda.org/probcomp/trcrpm)
 [![Anaconda-Server Badge](https://anaconda.org/probcomp/trcrpm/badges/platforms.svg)](https://anaconda.org/probcomp/trcrpm)
 [![Anaconda-Server Badge](https://anaconda.org/probcomp/trcrpm/badges/latest_release_date.svg)](https://anaconda.org/probcomp/trcrpm)
