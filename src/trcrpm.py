@@ -84,17 +84,47 @@ class Hierarchical_TRCRP_Mixture(object):
         self._incorporate_existing_timepoints(frame)
         assert self.engine.states[0].n_rows() == len(self.dataset)
 
-    def transition(self, **kwargs):
-        backend = kwargs.pop('backend', None)
-        kwargs['cols'] = self._variable_indexes()
-        if backend in ['cgpm', None]:
-            self.engine.transition(**kwargs)
-        elif backend in ['lovecat']:
-            self.engine.transition_lovecat(**kwargs)
-        elif backend in ['loom']:
-            self.engine.transition_loom(**kwargs)
-        else:
-            raise ValueError('Unknown backend: %s' % (backend,))
+    def resample_all(self, steps=None, seconds=None):
+        """Run MCMC inference on entire latent state
+
+        Parameters
+        ----------
+        steps : int, optional
+            Number of full Gibbs sweeps through all kernels, default is 1.
+        seconds : int, optional
+            Maximum number of seconds to run inference before timing out,
+            default is None.
+
+        If both `steps` and `seconds` are specified, then the min is taken. That
+        is, MCMC inference will run until the given number Gibbs steps are taken
+        or until the given number of seconds elapse, whichever comes first.
+        """
+        self._transition(N=steps, S=seconds, backend='lovecat')
+
+    def resample_hyperparameters(self, steps=None, seconds=None, variables=None):
+        """Run MCMC inference on variable hyperparameters.
+
+        Parameters
+        ----------
+        steps : int, optional
+            Number of full Gibbs sweeps through all kernels, default is 1.
+        seconds : int, optional
+            Maximum number of seconds to run inference before timing out,
+            default is None.
+        variables : list of str
+            List of time series variables whose hyperparameters to target,
+            default is all.
+
+        See Also
+        --------
+        resample_all
+        """
+        variables_transition = variables or self.variables
+        variable_indexes = list(itertools.chain.from_iterable([
+            self._variable_to_window_indexes(v) for v in variables_transition
+        ]))
+        self._transition(N=steps, S=seconds, cols=variable_indexes,
+            kernels=['view_alphas','column_hypers'], backend='cgpm')
 
     def simulate(self, timepoints, variables, nsamples, multiprocess=1):
         """Generate simulations from the posterior distribution.
@@ -228,6 +258,21 @@ class Hierarchical_TRCRP_Mixture(object):
         regimes = [[state.view_for(varno).Zr(rowid) for rowid in rowids]
             for state in self.engine.states]
         return np.asarray(regimes)
+
+    def _transition(self, **kwargs):
+        """Helper for MCMC resample methods (full interface not exposed)."""
+        if self.engine is None:
+            raise ValueError('No data incorporate yet.')
+        backend = kwargs.pop('backend', None)
+        kwargs['cols'] = kwargs.pop('cols', self._variable_indexes())
+        if backend in ['cgpm', None]:
+            self.engine.transition(**kwargs)
+        elif backend in ['lovecat']:
+            self.engine.transition_lovecat(**kwargs)
+        elif backend in ['loom']:
+            self.engine.transition_loom(**kwargs)
+        else:
+            raise ValueError('Unknown backend: %s' % (backend,))
 
     def _incorporate_new_timepoints(self, frame):
         """Incorporate fresh sample ids as new cgpm rows."""
