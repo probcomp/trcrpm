@@ -27,4 +27,4 @@ script:
   - conda build . -c probcomp/label/edge
 
 after_success:
-  # - bash conda/upload.sh
+  - bash conda/upload.sh
