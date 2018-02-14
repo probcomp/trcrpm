@@ -6,8 +6,6 @@ source:
   path: ../
 
 build:
-  # Investigate why using `python setup.py build` causes pytest to fail to find
-  # trcrpm when running `conda develop . -c probcomp/label/edge`.
   script: python setup.py install
 
 requirements:
@@ -16,11 +14,9 @@ requirements:
     - git
     - numpy 1.11.*
     - python 2.7.*
-    - pip
   run:
     - cgpm
     - crosscat
-    - matplotlib 1.5.*
     - numpy 1.11.*
     - pandas 0.18.*
     - six 1.10.*
