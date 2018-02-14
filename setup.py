@@ -138,13 +138,6 @@ setup(
         'trcrpm': 'src',
         'trcrpm.tests': 'tests',
     },
-    install_requires=[
-        'cgpm',                 # XXX Specify tag number.
-        'crosscat',             # XXX Specify tag number.
-    ],
-    tests_require=[
-        'pytest',
-    ],
     cmdclass={
         'build_py': local_build_py,
         'sdist': local_sdist,
