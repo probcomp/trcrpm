@@ -43,8 +43,8 @@ def get_version():
     verpart, revpart, localpart = match.groups()
     # Create a post version.
     if revpart > '0' or 'dirty' in localpart:
-        # Local part may be g0123abcd or g0123abcd-dirty. Hyphens not kosher here,
-        # so replace by dots.
+        # Local part may be g0123abcd or g0123abcd-dirty.
+        # Hyphens not kosher here, so replace by dots.
         localpart = localpart.replace('-', '.')
         full_version = '%s.post%s+%s' % (verpart, revpart, localpart)
     # Create a release version.
