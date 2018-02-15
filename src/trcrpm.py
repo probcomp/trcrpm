@@ -297,9 +297,10 @@ class Hierarchical_TRCRP_Mixture(object):
             )
             self.engine.incorporate_bulk(rowids_cgpm, observations_cgpm)
         # XXX Do not initialize here! Instead, consider including a dummy row of
-        # all zeros or something. The reason that we initialize with the full
+        # all zeros or similar. The reason that we initialize with the full
         # training set is to ensure that we have a good initial set of
-        # hyperparameter grids.
+        # hyperparameter grids. Instead, we should consider redefining the grids
+        # after incorporating new data (a slight heuristic).
         else:
             self.engine = Engine(
                 np.asarray(new_rows),

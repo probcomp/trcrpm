@@ -1,4 +1,4 @@
-# Temporally-Reweighted Chinese Restaurant Process Mixture Model
+# Temporally-Reweighted Chinese Restaurant Process Mixture Models
 
 [![Build Status](https://travis-ci.org/probcomp/trcrpm.svg?branch=master)](https://travis-ci.org/probcomp/trcrpm)
 [![Anaconda-Server Badge](https://anaconda.org/probcomp/trcrpm/badges/version.svg)](https://anaconda.org/probcomp/trcrpm)
