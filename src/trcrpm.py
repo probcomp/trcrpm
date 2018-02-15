@@ -21,34 +21,37 @@ class Hierarchical_TRCRP_Mixture(object):
 
         +------+----------+----------+----------+
         | Time |   Var A  |   Var B  |   Var C  |
-        +------+----------+----------+----------+
+        +======+==========+==========+==========+
         | 1997 |   0.62   |   0.38   |   1.34   |
+        +------+----------+----------+----------+
         | 1998 |   0.82   |   0.23   |    nan   |
+        +------+----------+----------+----------+
         | 1999 |    nan   |   0.13   |   2.19   |
+        +------+----------+----------+----------+
         | 2000 |   1.62   |   0.22   |   1.70   |
+        +------+----------+----------+----------+
         | 2001 |   0.78   |   2.89   |    nan   |
         +------+----------+----------+----------+
+
+    Parameters
+    ----------
+    chains: int
+        Number of parallel MCMC chains to use for inference.
+    lag : int
+        Number of time points in the history to use for reweighting the
+        CRP. If lag is zero, then all temporal dependencies are removed
+        and the model becomes a standard CRP mixture.
+    variables : list of str
+        Human-readable names of the time series to be modeled.
+    rng : numpy.random.RandomState
+        Source of entropy.
+    dependencies : list of tuple<string>, optional
+        Blocks of variables which are deterministically constrained to be
+        modeled jointly. Defaults to no deterministic constraints.
     """
 
     def __init__(self, chains, lag, variables, rng, dependencies=None):
-        """Initialize a TRCRP Mixture instance.
-
-        Parameters
-        ----------
-        chains: int
-            Number of parallel MCMC chains to use for inference.
-        lag : int
-            Number of time points in the history to use for reweighting the
-            CRP. If lag is zero, then all temporal dependencies are removed
-            and the model becomes a standard CRP mixture.
-        variables : list of str
-            Human-readable names of the time series to be modeled.
-        rng : np.random.RandomState
-            Source of entropy
-        dependencies : list of tuple<string>, optional
-            Blocks of variables which are deterministically constrained to be
-            modeled jointly. Defaults to no deterministic constraints.
-        """
+        """Initialize a Hierarchical TRCRP Mixture instance."""
         # From constructor.
         self.chains = chains
         self.lag = lag
@@ -76,7 +79,8 @@ class Hierarchical_TRCRP_Mixture(object):
         Parameters
         ----------
         frame : pd.DataFrame
-            DataFrame containing new observations.
+            DataFrame containing new observations. The columns must match
+            `self.variables`.
         """
         assert set(frame.columns) == set(self.variables)
         self._incorporate_new_timepoints(frame)
@@ -92,17 +96,19 @@ class Hierarchical_TRCRP_Mixture(object):
         steps : int, optional
             Number of full Gibbs sweeps through all kernels, default is 1.
         seconds : int, optional
-            Maximum number of seconds to run inference before timing out,
+            Maximum number of seconds to run inference steps before timing out,
             default is None.
 
+        Notes
+        -----
         If both `steps` and `seconds` are specified, then the min is taken. That
-        is, MCMC inference will run until the given number Gibbs steps are taken
-        or until the given number of seconds elapse, whichever comes first.
+        is, inference will run until the given number Gibbs steps are taken, or
+        until the given number of seconds elapse, whichever comes first.
         """
         self._transition(N=steps, S=seconds, backend='lovecat')
 
     def resample_hyperparameters(self, steps=None, seconds=None, variables=None):
-        """Run MCMC inference on variable hyperparameters.
+        """Run empirical Bayes on variable hyperparameters.
 
         Parameters
         ----------
@@ -140,25 +146,26 @@ class Hierarchical_TRCRP_Mixture(object):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             3D array of generated samples. The dimensions of the returned list
             are `(self.chains*nsamples, len(timepoints), len(variables))`, so
             that `result[i][j][k]` contains a simulation of `variables[k],` at
-            timepoint `j`, from chain `i`.
+            timepoint `j`, from chain `i`. A dissection of the output is shown
+            below:
 
-            // model has 2 chains, so chains * nsamples = 6 samples returned.
-            >> model.simulate([1, 4], ['a', 'b'], 3)
+            .. code-block:: text
 
-            |<-----------chain 0----------->||<-----------chain 1----------->|
-            [sample0.0, sample0.1, sample0.2, sample1.0, sample1.1, sample1.2]
+              # model has 2 chains, so chains * nsamples = 6 samples returned.
+              >> model.simulate([1, 4], ['a', 'b'], 3)
+              |<-----------chain 0----------->||<-----------chain 1----------->|
+              [sample0.0, sample0.1, sample0.2, sample1.0, sample1.1, sample1.2]
 
-            sample0.0: ((sim0.0_a1, sim0.0_b1), (sim0.0_a40, sim0.0_b40))
-            sample0.1: ((sim0.1_a1, sim0.1_b1), (sim0.1_a40, sim0.1_b40))
-            sample0.2: ((sim0.2_a1, sim0.2_b1), (sim0.2_a40, sim0.2_b40))
-
-            sample1.0: ((sim1.0_a1, sim1.0_b1), (sim1.0_a40, sim1.0_b40))
-            sample1.1: ((sim1.1_a1, sim1.1_b1), (sim1.1_a40, sim1.1_b40))
-            sample1.2: ((sim1.2_a1, sim1.2_b1), (sim1.2_a40, sim1.2_b40))
+              sample0.0: ((sim0.0_a1, sim0.0_b1), (sim0.0_a40, sim0.0_b40))
+              sample0.1: ((sim0.1_a1, sim0.1_b1), (sim0.1_a40, sim0.1_b40))
+              sample0.2: ((sim0.2_a1, sim0.2_b1), (sim0.2_a40, sim0.2_b40))
+              sample1.0: ((sim1.0_a1, sim1.0_b1), (sim1.0_a40, sim1.0_b40))
+              sample1.1: ((sim1.1_a1, sim1.1_b1), (sim1.1_a40, sim1.1_b40))
+              sample1.2: ((sim1.2_a1, sim1.2_b1), (sim1.2_a40, sim1.2_b40))
         """
         cgpm_rowids = [self._timepoint_to_rowid(t) for t in timepoints]
         constraints_list = [self._get_cgpm_constraints(t) for t in timepoints]
@@ -216,12 +223,12 @@ class Hierarchical_TRCRP_Mixture(object):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             3D array containing pairwise dependence probabilities of
             `variables` from each chain. The dimensions of the returned
             array are `(self.chains, len(variables), len(variables))`, so
-            that result[i,j,k] = 1 if `variables[j]` and `variables[k]` are
-            dependent according to chain `i`, and 0 otherwise.
+            that `result[i,j,k] == 1` if `variables[j]` and `variables[k]` are
+            dependent according to chain `i`, and `0` otherwise.
         """
         if variables is None:
             variables = self.variables
@@ -238,18 +245,18 @@ class Hierarchical_TRCRP_Mixture(object):
             Name of the time series variable to query.
         timepoints : list of int, optional
             List of timepoints at which to get the latent temporal regime value,
-            defaults to all observed timesteps.
+            defaults to all observed timepoints.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             2D array containing latent temporal regime at `timepoints` of the
             given variable, for each chain. The dimensions of the returned array
             are `(self.chains, len(timepoints))`, where `result[i][t]` is the
             value of the hidden temporal regime at `timepoints[t]`, according to
             chain `i`.
 
-            NOTE: The numerical (integer) values of the regimes are immaterial.
+            *Note*: The actual integer values of the regimes are immaterial.
         """
         if timepoints is None:
             timepoints = self.dataset.index
@@ -484,14 +491,29 @@ class Hierarchical_TRCRP_Mixture(object):
 class TRCRP_Mixture(Hierarchical_TRCRP_Mixture):
     """Temporally-Reweighted Chinese Restaurant Process Mixture.
 
-    The TRCRP_Mixture is a special case of the Hierarchical_TRCRP_Mixture where
-    all time series are deterministically constrained to be modeled jointly.
+    The TRCRP_Mixture is a special case of the
+    :class:`Hierarchical_TRCRP_Mixture` where all time series are
+    deterministically constrained to be modeled jointly.
+
+    Parameters
+    ----------
+    chains: int
+        Number of parallel MCMC chains to use for inference.
+    lag : int
+        Number of time points in the history to use for reweighting the
+        CRP. If lag is zero, then all temporal dependencies are removed
+        and the model becomes a standard CRP mixture.
+    variables : list of str
+        Human-readable names of the time series to be modeled.
+    rng : numpy.random.RandomState
+        Source of entropy.
 
     See Also
     --------
     Hierarchical_TRCRP_Mixture
     """
     def __init__(self, chains, lag, variables, rng):
+        """Initialize a TRCRP Mixture instance."""
         super(TRCRP_Mixture, self).__init__(
             chains, lag, variables, rng, dependencies=[variables])
 

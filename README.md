@@ -26,6 +26,13 @@ For tutorials showing how to use the method, refer to the
 [tutorials](./tutorials) directory. These will be populated over time with more
 interesting material and use cases.
 
+## Documentation
+
+The [API reference](https://probcomp-1.csail.mit.edu/trcrpm/doc/api.html) is
+available online. Use `make doc` to build the documentation locally (needs
+[`sphinx`](http://www.sphinx-doc.org/en/stable/install.html) and
+[`napoleon`](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/)).
+
 ## References
 
 * Feras A. Saad and Vikash K. Mansinghka, [A Bayesian Nonparametric Method for

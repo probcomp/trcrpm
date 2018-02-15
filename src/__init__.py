@@ -6,3 +6,8 @@
 from .trcrpm import Hierarchical_TRCRP_Mixture
 from .trcrpm import TRCRP_Mixture
 from .version import __version__
+
+__all__ = [
+    'TRCRP_Mixture',
+    'Hierarchical_TRCRP_Mixture',
+]
