@@ -29,25 +29,27 @@ def get_version():
     import subprocess
     # git describe a commit using the most recent tag reachable from it.
     # Release tags start with v* (XXX what about other tags starting with v?)
-    # and are of the form v1.1.2.
+    # and are of the form `v1.1.2`.
+    #
+    # The output `desc` will be of the form v1.1.2-2-gb92bef6[-dirty]:
+    # - verpart     v1.1.2
+    # - revpart     2
+    # - localpart   gb92bef6[-dirty]
     desc = subprocess.check_output([
         'git', 'describe', '--dirty', '--long', '--match', 'v*',
     ])
-    if '-' in desc:
-        # Not a release commit, create a post version which will be of the
-        # form v1.1.2-2-gb92bef6[-dirty] where:
-        # - verpart     v1.1.2
-        # - revpart     2
-        # - localpart   gb92bef6[-dirty]
-        match = re.match(r'^v([^-]*)-([0-9]+)-(.*)$', desc)
-        assert match is not None
-        verpart, revpart, localpart = match.groups()
-        # Local part may be g0123abcd or g0123abcd-dirty.  Hyphens are
-        # not kosher here, so replace by dots.
+    match = re.match(r'^v([^-]*)-([0-9]+)-(.*)$', desc)
+    assert match is not None
+    verpart, revpart, localpart = match.groups()
+    # Create a post version.
+    if revpart > '0' or 'dirty' in localpart:
+        # Local part may be g0123abcd or g0123abcd-dirty. Hyphens not kosher here,
+        # so replace by dots.
         localpart = localpart.replace('-', '.')
         full_version = '%s.post%s+%s' % (verpart, revpart, localpart)
+    # Create a release version.
     else:
-        full_version = desc
+        full_version = verpart
 
     # Strip the local part if there is one, to appease pkg_resources,
     # which handles only PEP 386, not PEP 440.
