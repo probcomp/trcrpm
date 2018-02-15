@@ -1,5 +1,7 @@
 .cache/
+*.egg-info/
 .eggs
+.ipynb_checkpoints/
 
 /bayeslite.egg-info/
 /build/
