@@ -2,6 +2,7 @@
 set -ev
 
 MASTER_BRANCH="master"
+echo ${REAL_BRANCH}
 
 # The logic below is necessary due to the fact that on a tagged build,
 # TRAVIS_BRANCH and TRAVIS_TAG are the same in the case of a tagged build, use
