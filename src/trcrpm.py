@@ -282,12 +282,20 @@ class Hierarchical_TRCRP_Mixture(object):
         new_rows = [self._get_timepoint_row(t) for t in new_timepoints]
         if self.initialized:
             outputs = self.engine.states[0].outputs
-            for row, timepoint in zip(new_rows, new_timepoints):
-                rowid_cgpm = self.engine.states[0].n_rows()
-                assert len(row) == len(outputs)
-                assert rowid_cgpm == self._timepoint_to_rowid(timepoint)
-                row_cgpm = {i: row[i] for i in outputs if not np.isnan(row[i])}
-                self.engine.incorporate(rowid_cgpm, row_cgpm)
+            assert all(len(row) == len(outputs) for row in new_rows)
+            rowids_cgpm = range(
+                self.engine.states[0].n_rows(),
+                self.engine.states[0].n_rows() + len(new_rows)
+            )
+            observations_cgpm = [
+                {i: row[i] for i in outputs if not np.isnan(row[i])}
+                for row in new_rows
+            ]
+            assert all(
+                rowid_cgpm == self._timepoint_to_rowid(timepoint)
+                for timepoint, rowid_cgpm in zip(new_timepoints, rowids_cgpm)
+            )
+            self.engine.incorporate_bulk(rowids_cgpm, observations_cgpm)
         # XXX Do not initialize here! Instead, consider including a dummy row of
         # all zeros or something. The reason that we initialize with the full
         # training set is to ensure that we have a good initial set of
