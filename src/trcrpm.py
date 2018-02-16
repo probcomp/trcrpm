@@ -213,18 +213,18 @@ class Hierarchical_TRCRP_Mixture(object):
         return samples
 
     def dependence_probability_pairwise(self, variables=None):
-        """Compute posterior dependence probabilities between variables.
+        """Compute posterior dependence probabilities between time series.
 
         Parameters
         ----------
         variables : list of str, optional
-            List of variables to include in the returned array. Defaults to
-            `self.variables`.
+            List of time series variables to include in the returned array.
+            Defaults to `self.variables`.
 
         Returns
         -------
         numpy.ndarray
-            3D array containing pairwise dependence probabilities of
+            3D array containing pairwise dependence probabilities of time series
             `variables` from each chain. The dimensions of the returned
             array are `(self.chains, len(variables), len(variables))`, so
             that `result[i,j,k] == 1` if `variables[j]` and `variables[k]` are
