@@ -21,6 +21,8 @@ extensions = [
     'sphinxcontrib.napoleon',
 ]
 
+autodoc_member_order = 'bysource'
+
 copyright = '2010-2018, MIT Probabilistic Computing Project'
 master_doc = 'index'
 project = 'trcrpm'

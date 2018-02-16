@@ -452,6 +452,16 @@ class Hierarchical_TRCRP_Mixture(object):
         return tuple(tuple(itertools.chain(deps_default, deps_external)))
 
     def to_metadata(self):
+        """Return a JSON representation that can be saved to disk.
+
+        The typical usage pattern is
+
+        .. code-block:: python
+
+            metadata = model.to_metadata()
+            model2 = Hierarchical_TRCRP_Mixture.from_metadata(metadata, seed=1)
+
+        """
         metadata = dict()
         # From constructor.
         metadata['chains'] = self.chains
@@ -471,6 +481,15 @@ class Hierarchical_TRCRP_Mixture(object):
 
     @staticmethod
     def from_metadata(metadata, seed):
+        """Load object from its JSON representation.
+
+        Parameters
+        ----------
+        metadata : json blob
+            JSON blob return from call to :meth:`to_metadata`.
+        seed : int
+            Seed for the random number generator to use.
+        """
         model = TRCRP_Mixture(
             chains=metadata['chains'],
             lag=metadata['lag'],
