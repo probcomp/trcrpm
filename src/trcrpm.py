@@ -455,13 +455,17 @@ class Hierarchical_TRCRP_Mixture(object):
     def to_metadata(self):
         """Return a JSON representation that can be saved to disk.
 
-        The typical usage pattern is
+        The typical usage pattern for serializing `model` and deserializing
+        it into `model2` is:
 
         .. code-block:: python
 
-            metadata = model.to_metadata()
-            model2 = Hierarchical_TRCRP_Mixture.from_metadata(metadata, seed=1)
-
+            >> import importlib
+            >> metadata = model.to_metadata()
+            >> modname, attrname = metadata['factory']
+            >> module = importlib.import_module(modname)
+            >> klass = getattr(module, attrname)
+            >> model2 = klass.from_metadata(binary)
         """
         metadata = dict()
         # From constructor.
@@ -491,6 +495,10 @@ class Hierarchical_TRCRP_Mixture(object):
             JSON blob return from call to :meth:`to_metadata`.
         seed : int
             Seed for the random number generator to use.
+
+        See Also
+        --------
+        to_metadata
         """
         model = cls(
             chains=metadata['chains'],
