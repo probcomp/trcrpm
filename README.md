@@ -1,9 +1,8 @@
 # Temporally-Reweighted Chinese Restaurant Process Mixture Models
 
 [![Build Status](https://travis-ci.org/probcomp/trcrpm.svg?branch=master)](https://travis-ci.org/probcomp/trcrpm)
-[![Anaconda-Server Badge](https://anaconda.org/probcomp/trcrpm/badges/version.svg)](https://anaconda.org/probcomp/trcrpm)
-[![Anaconda-Server Badge](https://anaconda.org/probcomp/trcrpm/badges/platforms.svg)](https://anaconda.org/probcomp/trcrpm)
-[![Anaconda-Server Badge](https://anaconda.org/probcomp/trcrpm/badges/latest_release_date.svg)](https://anaconda.org/probcomp/trcrpm)
+[![Anaconda Version Badge](https://anaconda.org/probcomp/trcrpm/badges/version.svg)](https://anaconda.org/probcomp/trcrpm)
+[![Anaconda Platforms Badge](https://anaconda.org/probcomp/trcrpm/badges/platforms.svg)](https://anaconda.org/probcomp/trcrpm)
 
 
 A nonparametric Bayesian method for clustering, imputation, and forecasting
