@@ -57,7 +57,7 @@ class Hierarchical_TRCRP_Mixture(object):
         self.lag = lag
         self.variables = list(variables)
         self.rng = rng
-        self.dependencies = self._make_dependencies(dependencies)
+        self.dependencies = dependencies
         # Derived attributes.
         self.window = self.lag + 1
         self.variables_lagged = list(itertools.chain.from_iterable([
@@ -415,11 +415,12 @@ class Hierarchical_TRCRP_Mixture(object):
 
     def _get_variable_dependence_constraints(self):
         """Ensure lagged columns and user constraints are modeled as a block."""
+        cgpm_dependencies = self._make_dependencies(self.dependencies)
         dependencies = [
             list(itertools.chain.from_iterable(
                 [self._variable_to_window_indexes(c) for c in block
             ]))
-            for block in self.dependencies
+            for block in cgpm_dependencies
         ]
         # Filter out any singleton dependencies.
         return [colnos for colnos in dependencies if len(colnos) > 1]
@@ -467,6 +468,7 @@ class Hierarchical_TRCRP_Mixture(object):
         metadata['chains'] = self.chains
         metadata['lag'] = self.lag
         metadata['variables'] = self.variables
+        metadata['dependencies'] = self.dependencies
         # Internal fields.
         metadata['initialized'] = self.initialized
         metadata['engine'] = self.engine.to_metadata() \
@@ -475,12 +477,12 @@ class Hierarchical_TRCRP_Mixture(object):
         metadata['dataset.index'] = list(self.dataset.index)
         metadata['dataset.columns'] = list(self.dataset.columns)
         # Factory.
-        metadata['factory'] = ('trcrpm', 'TRCRP_Mixture')
+        metadata['factory'] = ('trcrpm', 'Hierarchical_TRCRP_Mixture')
         return metadata
 
 
-    @staticmethod
-    def from_metadata(metadata, seed):
+    @classmethod
+    def from_metadata(cls, metadata, seed):
         """Load object from its JSON representation.
 
         Parameters
@@ -490,13 +492,19 @@ class Hierarchical_TRCRP_Mixture(object):
         seed : int
             Seed for the random number generator to use.
         """
-        model = TRCRP_Mixture(
+        model = cls(
             chains=metadata['chains'],
             lag=metadata['lag'],
             variables=metadata['variables'],
             rng=np.random.RandomState(seed),
+            dependencies=metadata['dependencies'],
         )
-        # Internal fields.
+        # Return model with populated internal fields.
+        return model._populate_from_metadata(model, metadata)
+
+
+    @staticmethod
+    def _populate_from_metadata(model, metadata):
         model.initialized = metadata['initialized']
         model.dataset = pd.DataFrame(
             metadata['dataset.values'],
@@ -536,8 +544,25 @@ class TRCRP_Mixture(Hierarchical_TRCRP_Mixture):
         super(TRCRP_Mixture, self).__init__(
             chains, lag, variables, rng, dependencies=[variables])
 
+    @classmethod
+    def from_metadata(cls, metadata, seed):
+        model = cls(
+            chains=metadata['chains'],
+            lag=metadata['lag'],
+            variables=metadata['variables'],
+            rng=np.random.RandomState(seed),
+        )
+        # Return model with populated internal fields.
+        return model._populate_from_metadata(model, metadata)
 
-# Multiprocessing helpers.
+    def to_metadata(self):
+        metadata = super(TRCRP_Mixture, self).to_metadata()
+        metadata['factory'] = ('trcrpm', 'TRCRP_Mixture')
+        return metadata
+
+
+# Multiprocessing helpers
+# -----------------------
 # These functions must be defined top-level in the module to work with
 # parallel_map.
 
