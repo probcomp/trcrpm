@@ -367,3 +367,11 @@ def test_get_temporal_regimes_crash():
         assert np.shape(regimes_all) == (trcrpm.chains, len(trcrpm.dataset))
         regimes_some = trcrpm.get_temporal_regimes(variable, timepoints=[0,1,2])
         assert np.shape(regimes_some) == (trcrpm.chains, 3)
+
+def test_get_dependence_probabilities_crash():
+    rng = np.random.RandomState(1)
+    trcrpm = TRCRP_Mixture(chains=4, lag=3, variables=FRAME.columns, rng=rng)
+    trcrpm.incorporate(FRAME)
+    nvars = len(trcrpm.variables)
+    dependencies = trcrpm.dependence_probability_pairwise()
+    assert np.allclose(dependencies, np.ones((nvars, nvars)))

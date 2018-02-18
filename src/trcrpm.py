@@ -233,7 +233,7 @@ class Hierarchical_TRCRP_Mixture(object):
         if variables is None:
             variables = self.variables
         varnos = [self._variable_to_index(var) for var in variables]
-        D = self.engine.dependence_probability_pairwise(cols=varnos)
+        D = self.engine.dependence_probability_pairwise(colnos=varnos)
         return np.asarray(D)
 
     def get_temporal_regimes(self, variable, timepoints=None):
@@ -550,7 +550,7 @@ class TRCRP_Mixture(Hierarchical_TRCRP_Mixture):
     def __init__(self, chains, lag, variables, rng):
         """Initialize a TRCRP Mixture instance."""
         super(TRCRP_Mixture, self).__init__(
-            chains, lag, variables, rng, dependencies=[variables])
+            chains, lag, variables, rng, dependencies=[list(variables)])
 
     @classmethod
     def from_metadata(cls, metadata, seed):
