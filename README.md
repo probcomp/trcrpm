@@ -23,7 +23,7 @@ For more information, see [INSTALLING.md](./INSTALLING.md)
 
 For tutorials showing how to use the method, refer to the
 [tutorials](./tutorials) directory. These will be populated over time with more
-interesting material and use cases.
+material and use cases.
 
 ## Documentation
 
