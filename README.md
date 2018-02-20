@@ -34,11 +34,11 @@ available online. Use `make doc` to build the documentation locally (needs
 
 ## References
 
-* Feras A. Saad and Vikash K. Mansinghka, [A Bayesian Nonparametric Method for
-  Clustering Imputation, and Forecasting in Multivariate Time
-  Series](https://arxiv.org/abs/1710.06900). To Appear: _Proceedings of the 20th
-  International Conference on Artificial Intelligence and Statistics_ (AISTATS),
-  2017.
+* Feras A. Saad and Vikash K. Mansinghka, [Temporally-Reweighted Chinese
+  Restaurant Process Mixtures For Clustering, Imputing, and
+  Forecasting Multivariate Time Series](https://probcomp-1.csail.mit.edu/aistats/saad18.pdf).
+  To Appear: _Proceedings of the 20th International Conference on Artificial
+  Intelligence and Statistics_ (AISTATS), 2017.
 
 ## License
 
