@@ -38,7 +38,7 @@ available online. Use `make doc` to build the documentation locally (needs
   Restaurant Process Mixtures For Clustering, Imputing, and
   Forecasting Multivariate Time Series](https://probcomp-1.csail.mit.edu/aistats/saad18.pdf).
   To Appear: _Proceedings of the 20th International Conference on Artificial
-  Intelligence and Statistics_ (AISTATS), 2017.
+  Intelligence and Statistics_ (AISTATS), 2018.
 
 ## License
 
