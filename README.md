@@ -22,8 +22,9 @@ For more information, see [INSTALLING.md](./INSTALLING.md)
 ## Getting started
 
 For tutorials showing how to use the method, refer to the
-[tutorials](./tutorials) directory. These will be populated over time with more
-material and use cases.
+[tutorials](./tutorials) directory.
+
+<img src="./tutorials/resources/bimodal-posteriors.png" width="750" align="middle">
 
 ## Documentation
 
