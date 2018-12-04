@@ -37,8 +37,8 @@ available online. Use `make doc` to build the documentation locally (needs
 
 * Feras A. Saad and Vikash K. Mansinghka, [Temporally-Reweighted Chinese
   Restaurant Process Mixtures For Clustering, Imputing, and
-  Forecasting Multivariate Time Series](https://probcomp-1.csail.mit.edu/aistats/saad18.pdf).
-  To Appear: _Proceedings of the 20th International Conference on Artificial
+  Forecasting Multivariate Time Series](http://proceedings.mlr.press/v84/saad18a.html).
+  _Proceedings of the 20th International Conference on Artificial
   Intelligence and Statistics_ (AISTATS), 2018.
 
 ## License
