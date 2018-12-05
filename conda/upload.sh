@@ -12,9 +12,11 @@ if [ -n "${TRAVIS_TAG}" ]; then
 
   # If tag did not come from master, add the "dev" label.
   if [ ${REAL_BRANCH} = ${MASTER_BRANCH} ]; then
+    echo 'Uploading to anaconda main'
     anaconda -t ${CONDA_UPLOAD_TOKEN} upload \
       -u ${CONDA_USER} \
       ~/miniconda/conda-bld/linux-64/${PACKAGE_NAME}-*.tar.bz2 --force
+    echo 'Uploaded'
   else
     anaconda -t ${CONDA_UPLOAD_TOKEN} upload \
       -u ${CONDA_USER} \
