@@ -17,6 +17,7 @@ requirements:
   run:
     - cgpm
     - crosscat
+    - ipykernel 4.8.*
     - jupyter
     - matplotlib 1.5.*
     - numpy 1.11.*
