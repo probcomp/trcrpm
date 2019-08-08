@@ -3,6 +3,10 @@
 # Copyright (c) 2018 MIT Probabilistic Computing Project.
 # Released under Apache 2.0; refer to LICENSE.txt.
 
+import os
+import re
+import subprocess
+
 try:
     from setuptools import setup
     from setuptools.command.build_py import build_py
@@ -25,8 +29,12 @@ except ImportError:
             Command.set_undefined_options(self, opt, val)
 
 def get_version():
-    import re
-    import subprocess
+    # The .git directory does not exist in the sdist, so read VERSION.
+    if not os.path.exists('.git'):
+        with open('VERSION', 'r') as f:
+            version = f.read().strip()
+            return version, version
+
     # git describe a commit using the most recent tag reachable from it.
     # Release tags start with v* (XXX what about other tags starting with v?)
     # and are of the form `v1.1.2`.
@@ -81,7 +89,6 @@ def write_version_py(path):
             f.write(version_new)
 
 def readme_contents():
-    import os.path
     readme_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
         'README.md')
@@ -99,7 +106,6 @@ class local_build_py(build_py):
 # the sdist.
 class local_sdist(sdist):
     def make_release_tree(self, base_dir, files):
-        import os
         sdist.make_release_tree(self, base_dir, files)
         version_file = os.path.join(base_dir, 'VERSION')
         print('updating %s' % (version_file,))
