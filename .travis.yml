@@ -16,8 +16,7 @@ install:
   - export PATH="${HOME}/miniconda/bin${PATH:+:${PATH}}"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda install conda-build=3.13.0
+  - conda install -q conda=4.6.14 conda-build
 
 script:
   - export CONDA_PACKAGE_VERSION="${TRAVIS_TAG:-$(date +%Y.%m.%d)}"
