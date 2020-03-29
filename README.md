@@ -35,11 +35,30 @@ available online. Use `make doc` to build the documentation locally (needs
 
 ## References
 
-* Feras A. Saad and Vikash K. Mansinghka, [Temporally-Reweighted Chinese
+Feras A. Saad and Vikash K. Mansinghka, [Temporally-Reweighted Chinese
   Restaurant Process Mixtures For Clustering, Imputing, and
   Forecasting Multivariate Time Series](http://proceedings.mlr.press/v84/saad18a.html).
-  _Proceedings of the 20th International Conference on Artificial
-  Intelligence and Statistics_ (AISTATS), 2018.
+  In AISTATS 2018: _Proceedings of the 20th International Conference on Artificial
+  Intelligence and Statistics_, Proceedings of Machine Learning Research 84,
+  Playa Blanca, Lanzarote, Canary Islands, 2018.
+
+To cite this work, please use the following BibTeX reference.
+
+```bibtex
+@inproceedings{saad2018trcrpm,
+author          = {Saad, Feras A. and Mansinghka, Vikash K.},
+title           = {Temporally-reweighted {C}hinese restaurant process mixtures for clustering, imputing, and forecasting multivariate time series},
+booktitle       = {AISTATS 2018: Proceedings of the 21st International Conference on Artificial Intelligence and Statistics},
+series          = {Proceedings of Machine Learning Research},
+volume          = 84,
+pages           = {755--764},
+publisher       = {PMLR},
+address         = {Playa Blanca, Lanzarote, Canary Islands},
+year            = {2018},
+keywords        = {probabilistic inference, multivariate time series, nonparametric Bayes, structure learning},
+}
+
+```
 
 ## License
 
