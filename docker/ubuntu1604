@@ -19,7 +19,7 @@ RUN             apt-get update -qq \
 
                 # Create a virtualenv with jupyter.
 RUN             virtualenv --system-site-packages /venv
-RUN             . /venv/bin/activate && pip install jupyter
+RUN             . /venv/bin/activate && pip install jupyter-core==4.6.1
 
                 # Clone the probcomp dependencies.
 RUN             git clone https://github.com/probcomp/crosscat.git
