@@ -45,7 +45,7 @@ second step runs a container with name `trcrp` and gives you a shell, and the
 third step activates the python virtualenv containing the software.
 
 ```bash
-$ docker build -t probcomp/trcrpm -f docker/Dockerfile .
+$ docker build -t probcomp/trcrpm -f docker/ubuntu1604 .
 $ docker run -it --name trcrp probcomp/trcrpm /bin/bash
 root@9cc66a75a0e2:/# source /venv/bin/activate
 ```
