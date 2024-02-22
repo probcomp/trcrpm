@@ -279,7 +279,7 @@ def test_timepoint_to_rowid():
     rng = np.random.RandomState(2)
     trcrpm = TRCRP_Mixture(chains=1, lag=0, variables=FRAME.columns, rng=rng)
     trcrpm.incorporate(FRAME)
-    for i in xrange(len(FRAME)):
+    for i in range(len(FRAME)):
         assert trcrpm._timepoint_to_rowid(i) == i
         assert trcrpm._timepoint_to_rowid(i) == i
 

@@ -61,7 +61,7 @@ class Hierarchical_TRCRP_Mixture(object):
         # Derived attributes.
         self.window = self.lag + 1
         self.variables_lagged = list(itertools.chain.from_iterable([
-            ['%s.lag.%d' % (varname, i,) for i in xrange(self.lag, -1, -1)]
+            ['%s.lag.%d' % (varname, i,) for i in range(self.lag, -1, -1)]
             for varname in self.variables
         ]))
         self.variable_index = {var: i for i, var in enumerate(self.variables)}
@@ -202,7 +202,7 @@ class Hierarchical_TRCRP_Mixture(object):
                 constraints, parents, self._variable_to_index, nsamples)
             for state in self.engine.states
         ]
-        mapper = parallel_map if multiprocess else map
+        mapper = parallel_map if multiprocess else itertools.starmap
         self.engine._seed_states()
         samples_raw_list = mapper(_simulate_ancestral_mp, args)
         samples_raw = itertools.chain.from_iterable(samples_raw_list)
@@ -285,15 +285,16 @@ class Hierarchical_TRCRP_Mixture(object):
         """Incorporate fresh sample ids as new cgpm rows."""
         new_timepoints = frame.index[~frame.index.isin(self.dataset.index)]
         new_observations = frame[self.variables].loc[new_timepoints]
-        self.dataset = self.dataset.append(new_observations)
+        self.dataset = pd.concat([self.dataset, new_observations],
+                                 ignore_index=False)
         new_rows = [self._get_timepoint_row(t) for t in new_timepoints]
         if self.initialized:
             outputs = self.engine.states[0].outputs
             assert all(len(row) == len(outputs) for row in new_rows)
-            rowids_cgpm = range(
+            rowids_cgpm = list(range(
                 self.engine.states[0].n_rows(),
                 self.engine.states[0].n_rows() + len(new_rows)
-            )
+            ))
             observations_cgpm = [
                 {i: row[i] for i in outputs if not np.isnan(row[i])}
                 for row in new_rows
@@ -353,7 +354,7 @@ class Hierarchical_TRCRP_Mixture(object):
         in, and dict containing columns and values to populate."""
         nan_col_names = nan_timepoint_mask[nan_timepoint_mask].index
         nan_col_idxs = [self._variable_to_index(col) for col in nan_col_names]
-        nan_col_values = frame.loc[nan_timepoint, nan_col_names].as_matrix()
+        nan_col_values = frame.loc[nan_timepoint, nan_col_names].to_numpy()
         cgpm_rowids = self._timepoint_to_rowids(nan_timepoint)
         cgpm_rowids_cells = [
             {col_idx - lag: value
@@ -398,7 +399,7 @@ class Hierarchical_TRCRP_Mixture(object):
 
     def _get_timepoint_window(self, timepoint):
         """Return the previous timepoints in the window of this timepoint."""
-        return range(timepoint, timepoint + self.window)
+        return list(range(timepoint, timepoint + self.window))
 
     def _variable_to_index(self, variable, lag=0):
         """Convert variable name to cgpm output index."""
@@ -407,7 +408,7 @@ class Hierarchical_TRCRP_Mixture(object):
 
     def _variable_to_window_indexes(self, variable):
         """Convert variable name to list of cgpm output indexes in its window."""
-        return [self._variable_to_index(variable, l) for l in xrange(self.window)]
+        return [self._variable_to_index(variable, l) for l in range(self.window)]
 
     def _variable_indexes(self):
         """Return list of cgpm output indexes, one per variable at lag 0."""
@@ -574,14 +575,14 @@ class TRCRP_Mixture(Hierarchical_TRCRP_Mixture):
 # These functions must be defined top-level in the module to work with
 # parallel_map.
 
-def _simulate_ancestral_mp((state, timepoints, variables, rowids, targets,
-        constraints, parents, variable_to_index, nsamples)):
+def _simulate_ancestral_mp(state, timepoints, variables, rowids, targets,
+        constraints, parents, variable_to_index, nsamples):
     """Simulate timepoints and variables ancestrally (multiple samples)."""
     return [
         _simulate_ancestral_one(
             state, timepoints, variables, rowids, targets, constraints, parents,
             variable_to_index)
-        for _i in xrange(nsamples)
+        for _i in range(nsamples)
     ]
 
 
